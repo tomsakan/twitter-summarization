@@ -1,62 +1,27 @@
 package rts;
 
-import org.apache.flink.table.sources.TableSource;
-import org.apache.flink.util.Collector;
-
-import scala.util.parsing.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.flink.api.common.functions.FilterFunction;
-import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.state.ValueState;
-import org.apache.flink.api.common.state.ValueStateDescriptor;
-import org.apache.flink.api.common.typeinfo.TypeInformation;
-import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.api.java.tuple.Tuple4;
-import org.apache.flink.api.java.tuple.Tuple6;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.calcite.shaded.com.google.common.collect.Lists;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.optimizer.plantranslate.JsonMapper;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.core.TreeNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.flink.streaming.api.datastream.ConnectedStreams;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
-import org.apache.flink.streaming.api.datastream.JoinedStreams;
-import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.co.CoFlatMapFunction;
-import org.apache.flink.streaming.api.functions.co.CoMapFunction;
-import org.apache.flink.streaming.api.functions.co.RichCoFlatMapFunction;
-import org.apache.flink.streaming.api.windowing.assigners.EventTimeSessionWindows;
-import org.apache.flink.streaming.api.windowing.assigners.ProcessingTimeSessionWindows;
-import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
-import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.java.StreamTableEnvironment;
-import org.apache.flink.table.sources.CsvTableSource;
-import org.apache.flink.api.java.functions.KeySelector;
 
 
 public class SumStream {
@@ -145,7 +110,7 @@ public class SumStream {
 				.filter(new CheckLength());
 		    
 //		    preprocessed.print();
-		    preprocessed.writeAsText(params.get("output"));
+//		    preprocessed.writeAsText(params.get("output"));
 //	    
 	    env.execute("Twitter Summarization");
 	}
@@ -186,7 +151,6 @@ public class SumStream {
 		public Tuple2<String, JsonNode> map(JsonNode node) throws Exception{
 			
 			ObjectMapper jsonParser = new ObjectMapper();
-//			JsonNode node = jsonParser.readValue(node, JsonNode.class);
 			
 			JsonNode finalNode = node;
 			
@@ -212,33 +176,81 @@ public class SumStream {
 		
 		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node) throws Exception{
 			String tweet = node.f1.get("full_text").asText();
+			String narrative = node.f1.get("narrative").asText();
+			String description = node.f1.get("description").asText();
+			String title = node.f1.get("title").asText();
 			
 //			remove urls
 			tweet = tweet.replaceAll(URL_REGEX, "");
+			narrative = narrative.replaceAll(URL_REGEX, "");
+			description = description.replaceAll(URL_REGEX, "");
+			title = title.replaceAll(URL_REGEX, "");
 			
 //			remove username
 			tweet = tweet.replaceAll("@([^\\s]+)", "");
+			narrative = narrative.replaceAll("@([^\\s]+)", "");
+			description = description.replaceAll("@([^\\s]+)", "");
+			title = title.replaceAll("@([^\\s]+)", "");
 			
 //			remove character repetition
-			tweet = tweet.replaceAll(CONSECUTIVE_CHARS, "$1");
+//			tweet = tweet.replaceAll(CONSECUTIVE_CHARS, "$1");
+//			narrative = narrative.replaceAll(CONSECUTIVE_CHARS, "$1");
+//			description = description.replaceAll(CONSECUTIVE_CHARS, "$1");
+//			title = title.replaceAll(CONSECUTIVE_CHARS, "$1");
 			
 //			remove words starting with a number
-			tweet = tweet.replaceAll(STARTS_WITH_NUMBER, "");
+//			tweet = tweet.replaceAll(STARTS_WITH_NUMBER, "");
+//			narrative = narrative.replaceAll(STARTS_WITH_NUMBER, "");
+//			description = description.replaceAll(STARTS_WITH_NUMBER, "");
+//			title = title.replaceAll(STARTS_WITH_NUMBER, "");
+			
+//			remove everything that is not alphabet or number
+			tweet = tweet.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
+			narrative = narrative.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
+			description = description.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
+			title = title.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
 			
 //			remove hashtags
 			tweet = tweet.replaceAll("#[A-Za-z]+","");
 			
+//			remove \n
 			tweet = tweet.replaceAll("\n", " ");
+			narrative = narrative.replaceAll("\n", " ");
+			description = description.replaceAll("\n", " ");
+			title = title.replaceAll("\n", " ");
 			
-			tweet = tweet.replaceAll("[^\\p{L}\\p{M}\\p{N}\\p{P}\\p{Z}\\p{Cf}\\p{Cs}\\s]", "");
+//			remove rt
+			tweet = tweet.replaceAll("RT", "");
 			
 //			remove stopwords
 			ArrayList<String> filteredWords = (ArrayList) Stream.of(tweet.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.remove(GlobalVar.stopwords);
+			filteredWords.removeAll(GlobalVar.stopwords);
+//			System.out.println(filteredWords);
 			tweet = filteredWords.stream().collect(Collectors.joining(" "));
 			
-			JsonNode preprocessedJson = node.f1;
+			filteredWords = (ArrayList) Stream.of(narrative.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+			filteredWords.removeAll(GlobalVar.stopwords);
+			narrative = filteredWords.stream().collect(Collectors.joining(" "));
+			
+			filteredWords = (ArrayList) Stream.of(description.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+			filteredWords.removeAll(GlobalVar.stopwords);
+			description = filteredWords.stream().collect(Collectors.joining(" "));
+			
+			filteredWords = (ArrayList) Stream.of(title.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+			filteredWords.removeAll(GlobalVar.stopwords);
+			title = filteredWords.stream().collect(Collectors.joining(" "));
+			
+			ObjectMapper mapper = new ObjectMapper();
+    		String json = "{\"id\":\""+ node.f1.get("id").asText() +"\"}";
+    		
+    		JsonNode preprocessedJson = mapper.readTree(json);
+			
     		((ObjectNode) preprocessedJson).put("text",tweet);
+    		((ObjectNode) preprocessedJson).put("narrative",narrative);
+    		((ObjectNode) preprocessedJson).put("description",description);
+    		((ObjectNode) preprocessedJson).put("title",title);
+    		((ObjectNode) preprocessedJson).put("original_text",node.f1.get("full_text").asText());
+    		((ObjectNode) preprocessedJson).put("assessed_label", node.f1.get("assessed_label").asText());
 			
 			return new Tuple2<String, JsonNode>(node.f0, preprocessedJson);
 		}
@@ -264,7 +276,7 @@ public class SumStream {
 
 	public static class CheckLength implements FilterFunction<Tuple2<String, JsonNode>>{
 		public boolean filter(Tuple2<String, JsonNode> node){
-			return node.f1.get("text").asText().length() >= 30;
+			return node.f1.get("text").asText().split("\\s+").length >= 5;
 		}
 	}
 }
