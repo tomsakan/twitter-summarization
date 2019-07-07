@@ -10,10 +10,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
@@ -90,6 +94,7 @@ public class SumStream {
 	static class GlobalVar{
 		public static TopicWithID ti = new TopicWithID();
 		public static TopicWithDescription td = new TopicWithDescription();
+		public static List<String> stopwords;
 	}
 	
 
@@ -124,17 +129,20 @@ public class SumStream {
         	GlobalVar.td.newItem(node.get("topid").asText(), line);
         }
         
-//	    	get twitter data from a json file
-		    DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
-		    DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser()).filter(new FilterNoLabel());
+//      read all stopwords in the file to a list of strings
+        GlobalVar.stopwords = Files.readAllLines(Paths.get("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"));
+        
+//	   	get twitter data from a json file
+		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
+		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser()).filter(new FilterNoLabel());
 		    
-//		    combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
-		    DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription());
+//		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
+		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription());
 		    
-//		    preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc.
-		    DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing())
-		    		.filter(new ContainsKeywords())
-		    		.filter(new CheckLength());
+//		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc.
+		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing())
+				.filter(new ContainsKeywords())
+				.filter(new CheckLength());
 		    
 //		    preprocessed.print();
 		    preprocessed.writeAsText(params.get("output"));
@@ -220,7 +228,14 @@ public class SumStream {
 //			remove hashtags
 			tweet = tweet.replaceAll("#[A-Za-z]+","");
 			
+			tweet = tweet.replaceAll("\n", " ");
+			
 			tweet = tweet.replaceAll("[^\\p{L}\\p{M}\\p{N}\\p{P}\\p{Z}\\p{Cf}\\p{Cs}\\s]", "");
+			
+//			remove stopwords
+			ArrayList<String> filteredWords = (ArrayList) Stream.of(tweet.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+			filteredWords.remove(GlobalVar.stopwords);
+			tweet = filteredWords.stream().collect(Collectors.joining(" "));
 			
 			JsonNode preprocessedJson = node.f1;
     		((ObjectNode) preprocessedJson).put("text",tweet);
@@ -249,7 +264,7 @@ public class SumStream {
 
 	public static class CheckLength implements FilterFunction<Tuple2<String, JsonNode>>{
 		public boolean filter(Tuple2<String, JsonNode> node){
-			return node.f1.get("text").asText().length() >= 10;
+			return node.f1.get("text").asText().length() >= 30;
 		}
 	}
 }
