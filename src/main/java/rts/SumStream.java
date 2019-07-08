@@ -6,14 +6,18 @@ import java.io.FileReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.utils.ParameterTool;
 import org.apache.flink.calcite.shaded.com.google.common.collect.Lists;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
@@ -56,11 +60,42 @@ public class SumStream {
 		}
 	}
 	
+	static class DocumentsList{
+		public HashMap<String, ArrayList<String>> dictionary = new HashMap<String, ArrayList<String>>();
+		
+		public void addItem(String topicID, String sentence){
+			List<String> termsList = dictionary.get(topicID);
+			
+//			if key is null, create a new map
+			if(termsList == null){
+				termsList = new ArrayList<String>();
+				termsList.add(sentence);
+				dictionary.put(topicID, (ArrayList<String>) termsList);
+			}else{
+				if(!termsList.contains(sentence)) termsList.add(sentence);
+			}
+			
+//			Set<String> tmpSet = new HashSet<String>(dictionary.get(topicID));
+//			tmpSet.add(term);
+////			List<String> mergedList = new ArrayList<String>(tmpSet);
+//			dictionary.put(topicID, new ArrayList<String>(tmpSet));
+		}
+		
+		public List<String> getDictionary(String topicID){
+			if(dictionary.containsKey(topicID)){
+				return dictionary.get(topicID);
+			}else return null;
+		}
+	}
+	
 	static class GlobalVar{
 		public static TopicWithID ti = new TopicWithID();
 		public static TopicWithDescription td = new TopicWithDescription();
 		public static List<String> stopwords;
+		public static DocumentsList docsList = new DocumentsList();
 	}
+	
+//	tf calculator
 	
 
 	public static void main(String[] args) throws Exception
@@ -104,14 +139,22 @@ public class SumStream {
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
 		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription());
 		    
-//		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc.
+//		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
+//		the documents list which contain keys(topics) and the tweets. 
 		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing())
 				.filter(new ContainsKeywords())
-				.filter(new CheckLength());
-		    
-//		    preprocessed.print();
-//		    preprocessed.writeAsText(params.get("output"));
-//	    
+				.filter(new CheckLength())
+//				create a map of strings which share the same topic id key
+				.keyBy(0).map(new CreateDocumentsList());
+		
+//		Create a dictionary from a list of documents with the same topic id
+//		DataStream<Tuple2<String, JsonNode>> dictionary = preprocessed.map(new CreateDictionary());
+		
+//		add a list of dictionary to each document and add a tf-idf score
+//		DataStream<Tuple3<String, JsonNode, List<String>>> addDictionary = dictionary.map(new AddDictionary());
+		
+//		System.out.println(GlobalVar.dict);
+//		addDictionary.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
 	
@@ -250,7 +293,7 @@ public class SumStream {
     		((ObjectNode) preprocessedJson).put("description",description);
     		((ObjectNode) preprocessedJson).put("title",title);
     		((ObjectNode) preprocessedJson).put("original_text",node.f1.get("full_text").asText());
-    		((ObjectNode) preprocessedJson).put("assessed_label", node.f1.get("assessed_label").asText());
+    		((ObjectNode) preprocessedJson).put("actual_label", node.f1.get("assessed_label").asText());
 			
 			return new Tuple2<String, JsonNode>(node.f0, preprocessedJson);
 		}
@@ -277,6 +320,35 @@ public class SumStream {
 	public static class CheckLength implements FilterFunction<Tuple2<String, JsonNode>>{
 		public boolean filter(Tuple2<String, JsonNode> node){
 			return node.f1.get("text").asText().split("\\s+").length >= 5;
+		}
+	}
+
+//	public static class CreateDictionary implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+//		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+//			
+//			String[] array = node.f1.get("text").asText().split(" ");
+//			List<String> temp = new ArrayList<>(Arrays.asList(array));
+//			temp.remove(" ");
+//			temp.remove("");
+//			GlobalVar.dict.addItem(node.f0, temp);
+//			
+////			System.out.println(temp);
+//			return node;
+//		}
+//	}
+
+//	public static class AddDictionary implements MapFunction<Tuple2<String, JsonNode>, Tuple3<String, JsonNode, List<String>>>{
+//		public Tuple3<String, JsonNode, List<String>> map(Tuple2<String, JsonNode> node){
+////			System.out.println(node.f0+" "+GlobalVar.dict.getDictionary(node.f0));
+//			return new Tuple3<String, JsonNode, List<String>>(node.f0, node.f1, GlobalVar.dict.getDictionary(node.f0));
+//			
+//		}
+//	}
+	
+	public static class CreateDocumentsList implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+			GlobalVar.docsList.addItem(node.f0, node.f1.get("text").asText());
+			return node;
 		}
 	}
 }
