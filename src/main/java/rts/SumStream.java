@@ -74,14 +74,9 @@ public class SumStream {
 			}else{
 				if(!termsList.contains(sentence)) termsList.add(sentence);
 			}
-			
-//			Set<String> tmpSet = new HashSet<String>(dictionary.get(topicID));
-//			tmpSet.add(term);
-////			List<String> mergedList = new ArrayList<String>(tmpSet);
-//			dictionary.put(topicID, new ArrayList<String>(tmpSet));
 		}
 		
-		public List<String> getDictionary(String topicID){
+		public List<String> getDocumentsList(String topicID){
 			if(dictionary.containsKey(topicID)){
 				return dictionary.get(topicID);
 			}else return null;
@@ -96,6 +91,33 @@ public class SumStream {
 	}
 	
 //	tf calculator
+	static double tf(List<String> doc, String term){
+		double result = 0;
+		for(String word : doc) {
+			if(term.equalsIgnoreCase(word)){
+				result++;
+			}
+		}
+		return result/doc.size();
+	}
+	
+//	idf calculator
+	static double idf(List<List<String>> docs, String term){
+		double n = 0;
+		for(List<String> doc : docs){
+			for(String word : doc){
+				if(term.equalsIgnoreCase(word)){
+					n++;
+					break;
+				}
+			}
+		}
+		return Math.log(docs.size() / n);
+	}
+	
+	static double tfIdf(List<String> doc, List<List<String>> docs, String term){
+		return tf(doc, term) * idf(docs, term);
+	}
 	
 
 	public static void main(String[] args) throws Exception
@@ -145,18 +167,25 @@ public class SumStream {
 				.filter(new ContainsKeywords())
 				.filter(new CheckLength())
 //				create a map of strings which share the same topic id key
-				.keyBy(0).map(new CreateDocumentsList());
+				.keyBy(0).map(new CreateDocumentsList())
+				
 		
-//		Create a dictionary from a list of documents with the same topic id
-//		DataStream<Tuple2<String, JsonNode>> dictionary = preprocessed.map(new CreateDictionary());
+				.map(new Test());
 		
-//		add a list of dictionary to each document and add a tf-idf score
-//		DataStream<Tuple3<String, JsonNode, List<String>>> addDictionary = dictionary.map(new AddDictionary());
+//		DataStream<Tuple2<String, JsonNode>> test = finalData.map(new Test());
+		
 		
 //		System.out.println(GlobalVar.dict);
 //		addDictionary.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
+	
+//	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+//		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+//			if(node.f0.equals("RTS47")) System.out.println(GlobalVar.docsList.getDocumentsList("RTS47"));
+//			return null;
+//		}
+//	}
 	
 	public static class TweetParser implements MapFunction<String, JsonNode>{		
 		public JsonNode map(String value) throws Exception{
@@ -322,28 +351,6 @@ public class SumStream {
 			return node.f1.get("text").asText().split("\\s+").length >= 5;
 		}
 	}
-
-//	public static class CreateDictionary implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
-//		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
-//			
-//			String[] array = node.f1.get("text").asText().split(" ");
-//			List<String> temp = new ArrayList<>(Arrays.asList(array));
-//			temp.remove(" ");
-//			temp.remove("");
-//			GlobalVar.dict.addItem(node.f0, temp);
-//			
-////			System.out.println(temp);
-//			return node;
-//		}
-//	}
-
-//	public static class AddDictionary implements MapFunction<Tuple2<String, JsonNode>, Tuple3<String, JsonNode, List<String>>>{
-//		public Tuple3<String, JsonNode, List<String>> map(Tuple2<String, JsonNode> node){
-////			System.out.println(node.f0+" "+GlobalVar.dict.getDictionary(node.f0));
-//			return new Tuple3<String, JsonNode, List<String>>(node.f0, node.f1, GlobalVar.dict.getDictionary(node.f0));
-//			
-//		}
-//	}
 	
 	public static class CreateDocumentsList implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
 		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
