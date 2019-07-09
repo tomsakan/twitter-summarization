@@ -167,10 +167,10 @@ public class SumStream {
 				.filter(new ContainsKeywords())
 				.filter(new CheckLength())
 //				create a map of strings which share the same topic id key
-				.keyBy(0).map(new CreateDocumentsList())
+				.keyBy(0).map(new CreateDocumentsList());
 				
 		
-				.map(new Test());
+//				.map(new Test());
 		
 //		DataStream<Tuple2<String, JsonNode>> test = finalData.map(new Test());
 		
