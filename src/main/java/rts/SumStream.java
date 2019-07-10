@@ -190,6 +190,23 @@ public class SumStream {
 		}
 		
 	}
+	
+	static class CosineSimilarityCalculator{
+		
+		static double cosineSimilarity(double[] queryVector, double[] documentVector){
+			double dotProduct = 0.0;
+			double normA = 0.0;
+			double normB = 0.0;
+			
+			for(int i = 0; i < queryVector.length; i++){
+				dotProduct += queryVector[i] * documentVector[i];
+		        normA += Math.pow(queryVector[i], 2);
+		        normB += Math.pow(documentVector[i], 2);
+			}
+//			System.out.println(dotProduct);
+			return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+		}
+	}
 
 	public static void main(String[] args) throws Exception
 	{
@@ -239,7 +256,7 @@ public class SumStream {
 				.filter(new CheckLength());
 		
 //				create a map of strings which share the same topic id key	
-		DataStream<Tuple2<String, JsonNode>> output = preprocessed.keyBy(0).map(new CreateDocumentsList())
+		DataStream<Tuple3<String, String, Double>> output = preprocessed.keyBy(0).map(new CreateDocumentsList())
 				.map(new CalculateTFIDF());
 //				.map(new Test());
 		
@@ -427,8 +444,8 @@ public class SumStream {
 		}
 	}
 	
-	public static class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
-		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+	public static class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tuple3<String, String, Double>>{
+		public Tuple3<String, String, Double> map(Tuple2<String, JsonNode> node){
 			
 //			System.out.println(GlobalVar.docsList.getDocumentsListByTopic(node.f0).values());
 			Collection<String> docs = GlobalVar.docsList.getDocumentsListByTopic(node.f0).values();
@@ -447,13 +464,14 @@ public class SumStream {
 				DocsList.add(a1);
 			}
 			
+			
 //			System.out.println(docs);
 			
 //			HashMap<String, String> innerMap = GlobalVar.docsList.getDocumentsListByTopic(node.f0);
 			for(HashMap.Entry<String, String> entry : GlobalVar.docsList.getDocumentsListByTopic(node.f0).entrySet()){
 				String key = entry.getKey();
 				List<String> doc = Arrays.asList(entry.getValue().split(" "));
-//				System.out.println(node.f0 + key + doc);
+				System.out.println(node.f0 + key + doc);
 				
 				List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText() +" "+node.f1.get("narrative").asText())).split(" "));
 				
@@ -463,19 +481,30 @@ public class SumStream {
 					if(!(terms.contains(term) || term.equals(" ") || term.equals(""))) terms.add(term);
 				}
 				
-				tfIdfCalculator calculator = new tfIdfCalculator();
-				
+				tfIdfCalculator calculatorTFIDF = new tfIdfCalculator();
+
+
+				double[] docArr = new double[terms.size()];
+				double[] queryArr = new double[terms.size()];
+				int i = 0;
 				for(String term : terms){
-					double tfidfDoc = calculator.tfIdf(doc, DocsList, term);
-					double tfidfQuery = calculator.tfIdf(Arrays.asList(description), DocsList, term);
+					double tfidfDoc = calculatorTFIDF.tfIdf(doc, DocsList, term);
+					double tfidfQuery = calculatorTFIDF.tfIdf(Arrays.asList(description), DocsList, term);
+					docArr[i] = tfidfDoc;
+					queryArr[i] = tfidfQuery;
+					i++;
 //					System.out.println(term + " " + tfidfDoc);
 //					System.out.println(term + " " + tfidfQuery);
 //					System.out.println(".....");
 				}
-				System.out.println(".....................");
+				
+				CosineSimilarityCalculator calculatorCosine = new CosineSimilarityCalculator();
+				double cosine = CosineSimilarityCalculator.cosineSimilarity(docArr, queryArr);
+//				System.out.println(key + " " + cosine);
+//				System.out.println(".....................");
+//				return new Tuple3<String, String, Double>(node.f0, key, cosine);
 			}
-			
-			return node;
+			return null;
 		}
 	}
 }
