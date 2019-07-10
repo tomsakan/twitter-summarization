@@ -73,6 +73,7 @@ public class SumStream {
 //			if key is null, create a new map
 			if(insideMap == null){
 				insideMap = new HashMap<String, String>();
+//				temp[0] = tweet id, temp[1] = text
 				insideMap.put(temp[0], temp[1]);
 				dictionary.put(topicID, insideMap);
 			}else{
@@ -95,11 +96,64 @@ public class SumStream {
 //		}
 	}
 	
+//	static class  TermCollections{
+//		public HashMap<String, HashMap<String, Double>> termCollections = new HashMap<String, HashMap<String, Double>>();
+//		
+//		public void addTerm(String topicID, String term, Double tfidf){
+//
+//			HashMap<String, Double> insideMap = (HashMap<String, Double>) termCollections.get(topicID);
+//			
+////			if key is null, create a new map
+//			if(insideMap == null){
+//				insideMap = new HashMap<String, Double>();
+//				insideMap.put(term, tfidf);
+//				termCollections.put(topicID, insideMap);
+//			}else{
+////				if(!insideMap.contains(sentence)) termsList.add(sentence);
+//				insideMap.put(temp[0], temp[1]);
+//				dictionary.put(topicID, insideMap);
+//			}
+//		}
+//	}
+	
+	static class CosineSimilarityList{
+		public HashMap<String, HashMap<String, Double>> cosineList = new HashMap<String, HashMap<String, Double>>();
+		
+		
+		public void addItem(String topicID, String id, Double cosineSim){
+
+			HashMap<String, Double> insideMap = (HashMap<String, Double>) cosineList.get(topicID);
+			
+//			if key is null, create a new map
+			if(insideMap == null){
+				insideMap = new HashMap<String, Double>();
+				insideMap.put(id, cosineSim);
+				cosineList.put(topicID, insideMap);
+			}else{
+				insideMap.put(id, cosineSim);
+				cosineList.put(topicID, insideMap);
+			}
+		}
+		
+		public HashMap<String, Double> getCosineSim(String topicID){
+			if(cosineList.containsKey(topicID)){
+				return cosineList.get(topicID);
+			}else return null;
+		}
+		
+//		public Collection<String> getDocumentsListByTopic(String topicID){
+//			if(dictionary.containsKey(topicID)){
+//				return dictionary.get(topicID).values();
+//			}else return null;
+//		}
+	}
+	
 	static class GlobalVar{
 		public static TopicWithID ti = new TopicWithID();
 		public static TopicWithDescription td = new TopicWithDescription();
 		public static List<String> stopwords;
 		public static DocumentsList docsList = new DocumentsList();
+		public static CosineSimilarityList cosineSim = new CosineSimilarityList();
 	}
 	
 //	tf calculator
@@ -181,19 +235,20 @@ public class SumStream {
 		
 //				create a map of strings which share the same topic id key	
 		DataStream<Tuple2<String, JsonNode>> output = preprocessed.keyBy(0).map(new CreateDocumentsList())
-				.map(new Test());
+				.map(new CalculateTFIDF());
+//				.map(new Test());
 		
 //		System.out.println(GlobalVar.dict);
 //		addDictionary.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
 	
-	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
-		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
-			if(node.f0.equals("RTS47")) System.out.println(GlobalVar.docsList.getDocumentsListByTopic("RTS47"));
-			return null;
-		}
-	}
+//	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+//		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+//			if(node.f0.equals("RTS47")) System.out.println(GlobalVar.docsList.getDocumentsListByTopic("RTS47"));
+//			return null;
+//		}
+//	}
 	
 	public static class TweetParser implements MapFunction<String, JsonNode>{		
 		public JsonNode map(String value) throws Exception{
@@ -363,6 +418,23 @@ public class SumStream {
 	public static class CreateDocumentsList implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
 		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
 			GlobalVar.docsList.addItem(node.f0, node.f1.get("id").asText()+"!@"+node.f1.get("text").asText());
+			return node;
+		}
+	}
+	
+	public static class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+			
+//			System.out.println(GlobalVar.docsList.getDocumentsListByTopic(node.f0).values());
+			Collection<String> texts = GlobalVar.docsList.getDocumentsListByTopic(node.f0).values();
+			ArrayList<List<String>> DocsList = new ArrayList<List<String>>();
+			List<String> innerList = new ArrayList<String>();
+			
+			for( String text : texts){
+				innerList.addAll(Arrays.asList(text.split(" ")));
+				System.out.println(innerList);
+			}
+			
 			return node;
 		}
 	}
