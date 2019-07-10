@@ -156,35 +156,40 @@ public class SumStream {
 		public static CosineSimilarityList cosineSim = new CosineSimilarityList();
 	}
 	
-//	tf calculator
-	static double tf(List<String> doc, String term){
-		double result = 0;
-		for(String word : doc) {
-			if(term.equalsIgnoreCase(word)){
-				result++;
-			}
-		}
-		return result/doc.size();
-	}
-	
-//	idf calculator
-	static double idf(List<List<String>> docs, String term){
-		double n = 0;
-		for(List<String> doc : docs){
-			for(String word : doc){
+	static class tfIdfCalculator{
+//		tf calculator
+		static double tf(List<String> doc, String term){
+			double result = 0;
+			for(String word : doc) {
 				if(term.equalsIgnoreCase(word)){
-					n++;
-					break;
+					result++;
 				}
 			}
+//			if(term.equals("term") && result != 0.0) System.out.println(term +" "+result);
+			return result/doc.size();
 		}
-		return Math.log(docs.size() / n);
+		
+//		idf calculator
+		static double idf(List<List<String>> docs, String term){
+//			System.out.println(docs);
+			double n = 0;
+			for(List<String> doc : docs){
+				for(String word : doc){
+					if(term.equals(word)){
+						n++;
+						break;
+					}
+				}
+			}
+//			System.out.println(docs.size() / n);
+			return Math.log(docs.size() / n);
+		}
+		
+		static double tfIdf(List<String> doc, List<List<String>> docs, String term){
+			return tf(doc, term) * idf(docs, term);
+		}
+		
 	}
-	
-	static double tfIdf(List<String> doc, List<List<String>> docs, String term){
-		return tf(doc, term) * idf(docs, term);
-	}
-	
 
 	public static void main(String[] args) throws Exception
 	{
@@ -195,7 +200,7 @@ public class SumStream {
 	    env.getConfig().setGlobalJobParameters(params);
 	    
 //	    read file that contains topic id
-	    FileReader file1 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/rts2017-batch-qrels.txt"));
+	    FileReader file1 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/test1.txt"));
         BufferedReader read1 = new BufferedReader(file1);
         String line = null;
         String[] word = null;
@@ -206,7 +211,7 @@ public class SumStream {
         }
         
 //      read file that contains topic description and title
-        FileReader file2 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/1.TREC2017-RTS-topics-final.json"));
+        FileReader file2 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
         BufferedReader read2 = new BufferedReader(file2);
         line = null;
         word = null;
@@ -221,7 +226,7 @@ public class SumStream {
         GlobalVar.stopwords = Files.readAllLines(Paths.get("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"));
         
 //	   	get twitter data from a json file
-		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
+		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
 		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser()).filter(new FilterNoLabel());
 		    
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
@@ -426,19 +431,49 @@ public class SumStream {
 		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
 			
 //			System.out.println(GlobalVar.docsList.getDocumentsListByTopic(node.f0).values());
-			Collection<String> texts = GlobalVar.docsList.getDocumentsListByTopic(node.f0).values();
-			ArrayList<List<String>> DocsList = new ArrayList<List<String>>();
+			Collection<String> docs = GlobalVar.docsList.getDocumentsListByTopic(node.f0).values();
+			List<List<String>> DocsList = new ArrayList<List<String>>();
 			List<String> innerList = new ArrayList<String>();
 			
-			String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");			
-			for( String text : texts){
-				innerList.addAll(Arrays.asList(text.split(" ")));
-				DocsList.add(innerList);
-			}
+			String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");	
+			
 			innerList.addAll(Arrays.asList(description));
 			DocsList.add(innerList);
 			
-			System.out.println(DocsList);
+			
+			for( String doc : docs){
+				List<String> a1 = new ArrayList<>();
+				 a1.addAll(Arrays.asList(doc.split(" ")));
+				DocsList.add(a1);
+			}
+			
+//			System.out.println(docs);
+			
+//			HashMap<String, String> innerMap = GlobalVar.docsList.getDocumentsListByTopic(node.f0);
+			for(HashMap.Entry<String, String> entry : GlobalVar.docsList.getDocumentsListByTopic(node.f0).entrySet()){
+				String key = entry.getKey();
+				List<String> doc = Arrays.asList(entry.getValue().split(" "));
+//				System.out.println(node.f0 + key + doc);
+				
+				List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText() +" "+node.f1.get("narrative").asText())).split(" "));
+				
+				List<String> terms = new ArrayList<String>();
+				
+				for(String term : temp){
+					if(!(terms.contains(term) || term.equals(" ") || term.equals(""))) terms.add(term);
+				}
+				
+				tfIdfCalculator calculator = new tfIdfCalculator();
+				
+				for(String term : terms){
+					double tfidfDoc = calculator.tfIdf(doc, DocsList, term);
+					double tfidfQuery = calculator.tfIdf(Arrays.asList(description), DocsList, term);
+//					System.out.println(term + " " + tfidfDoc);
+//					System.out.println(term + " " + tfidfQuery);
+//					System.out.println(".....");
+				}
+				System.out.println(".....................");
+			}
 			
 			return node;
 		}
