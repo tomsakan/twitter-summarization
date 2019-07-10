@@ -430,10 +430,15 @@ public class SumStream {
 			ArrayList<List<String>> DocsList = new ArrayList<List<String>>();
 			List<String> innerList = new ArrayList<String>();
 			
+			String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");			
 			for( String text : texts){
 				innerList.addAll(Arrays.asList(text.split(" ")));
-				System.out.println(innerList);
+				DocsList.add(innerList);
 			}
+			innerList.addAll(Arrays.asList(description));
+			DocsList.add(innerList);
+			
+			System.out.println(DocsList);
 			
 			return node;
 		}
