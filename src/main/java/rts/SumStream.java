@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,26 +62,37 @@ public class SumStream {
 	}
 	
 	static class DocumentsList{
-		public HashMap<String, ArrayList<String>> dictionary = new HashMap<String, ArrayList<String>>();
+		public HashMap<String, HashMap<String, String>> dictionary = new HashMap<String, HashMap<String, String>>();
+		
 		
 		public void addItem(String topicID, String sentence){
-			List<String> termsList = dictionary.get(topicID);
+
+			HashMap<String, String> insideMap = (HashMap<String, String>) dictionary.get(topicID);
+			String[] temp = sentence.split("!@");
 			
 //			if key is null, create a new map
-			if(termsList == null){
-				termsList = new ArrayList<String>();
-				termsList.add(sentence);
-				dictionary.put(topicID, (ArrayList<String>) termsList);
+			if(insideMap == null){
+				insideMap = new HashMap<String, String>();
+				insideMap.put(temp[0], temp[1]);
+				dictionary.put(topicID, insideMap);
 			}else{
-				if(!termsList.contains(sentence)) termsList.add(sentence);
+//				if(!insideMap.contains(sentence)) termsList.add(sentence);
+				insideMap.put(temp[0], temp[1]);
+				dictionary.put(topicID, insideMap);
 			}
 		}
 		
-		public List<String> getDocumentsList(String topicID){
+		public HashMap<String, String> getDocumentsListByTopic(String topicID){
 			if(dictionary.containsKey(topicID)){
 				return dictionary.get(topicID);
 			}else return null;
 		}
+		
+//		public Collection<String> getDocumentsListByTopic(String topicID){
+//			if(dictionary.containsKey(topicID)){
+//				return dictionary.get(topicID).values();
+//			}else return null;
+//		}
 	}
 	
 	static class GlobalVar{
@@ -165,27 +177,23 @@ public class SumStream {
 //		the documents list which contain keys(topics) and the tweets. 
 		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing())
 				.filter(new ContainsKeywords())
-				.filter(new CheckLength())
-//				create a map of strings which share the same topic id key
-				.keyBy(0).map(new CreateDocumentsList());
-				
+				.filter(new CheckLength());
 		
-//				.map(new Test());
-		
-//		DataStream<Tuple2<String, JsonNode>> test = finalData.map(new Test());
-		
+//				create a map of strings which share the same topic id key	
+		DataStream<Tuple2<String, JsonNode>> output = preprocessed.keyBy(0).map(new CreateDocumentsList())
+				.map(new Test());
 		
 //		System.out.println(GlobalVar.dict);
 //		addDictionary.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
 	
-//	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
-//		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
-//			if(node.f0.equals("RTS47")) System.out.println(GlobalVar.docsList.getDocumentsList("RTS47"));
-//			return null;
-//		}
-//	}
+	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
+			if(node.f0.equals("RTS47")) System.out.println(GlobalVar.docsList.getDocumentsListByTopic("RTS47"));
+			return null;
+		}
+	}
 	
 	public static class TweetParser implements MapFunction<String, JsonNode>{		
 		public JsonNode map(String value) throws Exception{
@@ -354,7 +362,7 @@ public class SumStream {
 	
 	public static class CreateDocumentsList implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
 		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
-			GlobalVar.docsList.addItem(node.f0, node.f1.get("text").asText());
+			GlobalVar.docsList.addItem(node.f0, node.f1.get("id").asText()+"!@"+node.f1.get("text").asText());
 			return node;
 		}
 	}
