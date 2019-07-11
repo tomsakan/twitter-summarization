@@ -3,6 +3,8 @@ package rts.calculator;
 import java.io.Serializable;
 import java.util.List;
 
+import rts.datastructures.DFCounter;
+
 public class TFIDFCalculator implements Serializable{
 /**
 	 * 
@@ -22,23 +24,12 @@ public class TFIDFCalculator implements Serializable{
 	}
 	
 //	idf calculator
-	public double idf(List<List<String>> docs, String term){
-//		System.out.println(docs);
-		double n = 0;
-		for(List<String> doc : docs){
-			for(String word : doc){
-				if(term.equals(word)){
-					n++;
-					break;
-				}
-			}
-		}
-//		System.out.println(docs.size() / n);
-		return Math.log(docs.size() / n);
+	public double idf(Integer size, Integer termCount){
+		return Math.log(size / termCount);
 	}
 	
-	public double tfIdf(List<String> doc, List<List<String>> docs, String term){
-		return tf(doc, term) * idf(docs, term);
+	public double tfIdf(List<String> doc, Integer size, Integer termCount, String term){
+		return tf(doc, term) * idf(size, termCount);
 	}
 	
 }
