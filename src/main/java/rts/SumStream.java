@@ -28,9 +28,13 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import rts.tasks.CheckLength;
 import rts.tasks.CombinedDescription;
 import rts.tasks.TweetParser;
 import rts.tasks.FilterNoLabels;
+import rts.tasks.PreProcessing;
+import rts.tasks.ContainsKeyWords;
+
 
 
 public class SumStream {
@@ -123,7 +127,6 @@ public class SumStream {
 	}
 	
 	static class GlobalVar{
-		public static List<String> stopwords;
 		public static DocumentsList docsList = new DocumentsList();
 		public static CosineSimilarityList cosineSim = new CosineSimilarityList();
 	}
@@ -187,10 +190,6 @@ public class SumStream {
 //		get the parameters
 		ParameterTool params = ParameterTool.fromArgs(args);
 	    env.getConfig().setGlobalJobParameters(params);
-
-        
-//      read all stopwords in the file to a list of strings
-        GlobalVar.stopwords = Files.readAllLines(Paths.get("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"));
         
 //	   	get twitter data from a json file
 		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
@@ -201,8 +200,8 @@ public class SumStream {
 		    
 //		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
 //		the documents list which contain keys(topics) and the tweets. 
-		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing())
-				.filter(new ContainsKeywords())
+		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"))
+				.filter(new ContainsKeyWords())
 				.filter(new CheckLength());
 		
 //				create a map of strings which share the same topic id key	
@@ -213,106 +212,6 @@ public class SumStream {
 //		System.out.println(GlobalVar.dict);
 //		addDictionary.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
-	}
-
-	public static class PreProcessing implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
-		
-		private final static String URL_REGEX = "((www\\.[\\s]+)|(https?://[^\\s]+))";
-		private final static String CONSECUTIVE_CHARS = "([a-z])\\1{1,}";
-		private final static String STARTS_WITH_NUMBER = "[1-9]\\s*(\\w+)";
-		
-		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node) throws Exception{
-			String tweet = node.f1.get("full_text").asText();
-			String narrative = node.f1.get("narrative").asText();
-			String description = node.f1.get("description").asText();
-			String title = node.f1.get("title").asText();
-			
-//			remove urls
-			tweet = tweet.replaceAll(URL_REGEX, "");
-			narrative = narrative.replaceAll(URL_REGEX, "");
-			description = description.replaceAll(URL_REGEX, "");
-			title = title.replaceAll(URL_REGEX, "");
-			
-//			remove username
-			tweet = tweet.replaceAll("@([^\\s]+)", "");
-			narrative = narrative.replaceAll("@([^\\s]+)", "");
-			description = description.replaceAll("@([^\\s]+)", "");
-			title = title.replaceAll("@([^\\s]+)", "");
-			
-//			remove everything that is not alphabet or number
-			tweet = tweet.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			narrative = narrative.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			description = description.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			title = title.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			
-//			remove hashtags
-			tweet = tweet.replaceAll("#[A-Za-z]+","");
-			
-//			remove \n
-			tweet = tweet.replaceAll("\n", " ");
-			narrative = narrative.replaceAll("\n", " ");
-			description = description.replaceAll("\n", " ");
-			title = title.replaceAll("\n", " ");
-			
-//			remove rt
-			tweet = tweet.replaceAll("RT", "");
-			
-//			remove stopwords
-			ArrayList<String> filteredWords = (ArrayList) Stream.of(tweet.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.removeAll(GlobalVar.stopwords);
-//			System.out.println(filteredWords);
-			tweet = filteredWords.stream().collect(Collectors.joining(" "));
-			
-			filteredWords = (ArrayList) Stream.of(narrative.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.removeAll(GlobalVar.stopwords);
-			narrative = filteredWords.stream().collect(Collectors.joining(" "));
-			
-			filteredWords = (ArrayList) Stream.of(description.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.removeAll(GlobalVar.stopwords);
-			description = filteredWords.stream().collect(Collectors.joining(" "));
-			
-			filteredWords = (ArrayList) Stream.of(title.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.removeAll(GlobalVar.stopwords);
-			title = filteredWords.stream().collect(Collectors.joining(" "));
-			
-			ObjectMapper mapper = new ObjectMapper();
-    		String json = "{\"id\":\""+ node.f1.get("id").asText() +"\"}";
-    		
-    		JsonNode preprocessedJson = mapper.readTree(json);
-			
-    		((ObjectNode) preprocessedJson).put("text",tweet);
-    		((ObjectNode) preprocessedJson).put("narrative",narrative);
-    		((ObjectNode) preprocessedJson).put("description",description);
-    		((ObjectNode) preprocessedJson).put("title",title);
-    		((ObjectNode) preprocessedJson).put("original_text",node.f1.get("full_text").asText());
-    		((ObjectNode) preprocessedJson).put("actual_label", node.f1.get("assessed_label").asText());
-			
-			return new Tuple2<String, JsonNode>(node.f0, preprocessedJson);
-		}
-	}
-
-	public static class ContainsKeywords implements FilterFunction<Tuple2<String, JsonNode>>{
-		public boolean filter(Tuple2<String, JsonNode> node){
-			ArrayList<String> al= new ArrayList<String>();
-			
-			String[] description = node.f1.get("description").asText().toLowerCase().split(" ");
-			String[] narrative = node.f1.get("narrative").asText().toLowerCase().split(" ");
-			String[] title = node.f1.get("title").asText().toLowerCase().split(" ");
-			
-			for(String word : description) al.add(word);
-			for(String word : narrative) al.add(word);
-			for(String word : title) al.add(word);
-			
-			String tweet = node.f1.get("text").asText().toLowerCase();
-			
-			return al.parallelStream().anyMatch(tweet::contains);
-		}
-	}
-
-	public static class CheckLength implements FilterFunction<Tuple2<String, JsonNode>>{
-		public boolean filter(Tuple2<String, JsonNode> node){
-			return node.f1.get("text").asText().split("\\s+").length >= 5;
-		}
 	}
 	
 	public static class CreateDocumentsList implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
