@@ -28,24 +28,12 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import rts.tasks.TweetParser;
+
 
 public class SumStream {
 
-	static class TopicWithID{
-	    public HashMap<String, String>  tweetWithIDs = new HashMap<String, String>();
-
-	    public void newItem(String id, String topicIDandLabel){
-	    	tweetWithIDs.put(id, topicIDandLabel);
-	    }
-
-	    public String getID(String id){
-	        if (tweetWithIDs.containsKey(id)){
-	            return tweetWithIDs.get(id);
-	        }else{
-	        	return null;
-	        }
-	    }
-	}
+	
 	
 	static class TopicWithDescription{
 		public HashMap<String, String> topicWithDes = new HashMap<String, String>();
@@ -149,7 +137,6 @@ public class SumStream {
 	}
 	
 	static class GlobalVar{
-		public static TopicWithID ti = new TopicWithID();
 		public static TopicWithDescription td = new TopicWithDescription();
 		public static List<String> stopwords;
 		public static DocumentsList docsList = new DocumentsList();
@@ -216,22 +203,13 @@ public class SumStream {
 		ParameterTool params = ParameterTool.fromArgs(args);
 	    env.getConfig().setGlobalJobParameters(params);
 	    
-//	    read file that contains topic id
-	    FileReader file1 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/test1.txt"));
-        BufferedReader read1 = new BufferedReader(file1);
-        String line = null;
-        String[] word = null;
-        while ((line = read1.readLine()) != null) 
-        {
-        	word = line.split(" ");
-            GlobalVar.ti.newItem(word[2], word[0]+" "+word[3]);
-        }
+
         
 //      read file that contains topic description and title
         FileReader file2 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
         BufferedReader read2 = new BufferedReader(file2);
-        line = null;
-        word = null;
+        String line = null;
+        String word = null;
         ObjectMapper jsonParser = new ObjectMapper();
         while ((line = read2.readLine()) != null) 
         {
@@ -244,7 +222,7 @@ public class SumStream {
         
 //	   	get twitter data from a json file
 		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
-		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser()).filter(new FilterNoLabel());
+		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabel());
 		    
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
 		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription());
@@ -272,29 +250,6 @@ public class SumStream {
 //		}
 //	}
 	
-	public static class TweetParser implements MapFunction<String, JsonNode>{		
-		public JsonNode map(String value) throws Exception{
-			
-			ObjectMapper jsonParser = new ObjectMapper();
-			
-			JsonNode node = jsonParser.readValue(value, JsonNode.class);
-			
-			List<String> keepList = Lists.newArrayList("created_at", "id", "full_text");
-			
-			node = ((ObjectNode) node).retain(keepList);
-		   
-			JsonNode parsedJson = node;
-			
-			try{
-				String[] idAndLabel = GlobalVar.ti.getID(node.get("id").asText()).split(" ");
-	    		((ObjectNode) parsedJson).put("topic_id", idAndLabel[0]);
-	    		((ObjectNode) parsedJson).put("assessed_label", idAndLabel[1]);
-	    		return parsedJson;
-			}catch(Exception e){
-				return parsedJson;
-			}
-		}
-	}
 	
 	public static class FilterNoLabel implements FilterFunction<JsonNode>{
 		public boolean filter(JsonNode node){
