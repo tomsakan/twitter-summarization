@@ -28,26 +28,12 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 
+import rts.tasks.CombinedDescription;
 import rts.tasks.TweetParser;
+import rts.tasks.FilterNoLabels;
 
 
 public class SumStream {
-
-	
-	
-	static class TopicWithDescription{
-		public HashMap<String, String> topicWithDes = new HashMap<String, String>();
-		
-		public void newItem(String topid, String description){
-			topicWithDes.put(topid, description);
-		}
-		
-		public String getDescription(String topid){
-			if(topicWithDes.containsKey(topid)){
-				return topicWithDes.get(topid);
-			}else return null;
-		}
-	}
 	
 	static class DocumentsList{
 		public HashMap<String, HashMap<String, String>> dictionary = new HashMap<String, HashMap<String, String>>();
@@ -137,7 +123,6 @@ public class SumStream {
 	}
 	
 	static class GlobalVar{
-		public static TopicWithDescription td = new TopicWithDescription();
 		public static List<String> stopwords;
 		public static DocumentsList docsList = new DocumentsList();
 		public static CosineSimilarityList cosineSim = new CosineSimilarityList();
@@ -202,30 +187,17 @@ public class SumStream {
 //		get the parameters
 		ParameterTool params = ParameterTool.fromArgs(args);
 	    env.getConfig().setGlobalJobParameters(params);
-	    
 
-        
-//      read file that contains topic description and title
-        FileReader file2 = new FileReader(new File("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
-        BufferedReader read2 = new BufferedReader(file2);
-        String line = null;
-        String word = null;
-        ObjectMapper jsonParser = new ObjectMapper();
-        while ((line = read2.readLine()) != null) 
-        {
-        	JsonNode node = jsonParser.readValue(line, JsonNode.class);
-        	GlobalVar.td.newItem(node.get("topid").asText(), line);
-        }
         
 //      read all stopwords in the file to a list of strings
         GlobalVar.stopwords = Files.readAllLines(Paths.get("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"));
         
 //	   	get twitter data from a json file
 		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
-		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabel());
+		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabels());
 		    
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
-		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription());
+		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
 		    
 //		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
 //		the documents list which contain keys(topics) and the tweets. 
@@ -241,43 +213,6 @@ public class SumStream {
 //		System.out.println(GlobalVar.dict);
 //		addDictionary.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
-	}
-	
-//	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
-//		public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
-//			if(node.f0.equals("RTS47")) System.out.println(GlobalVar.docsList.getDocumentsListByTopic("RTS47"));
-//			return null;
-//		}
-//	}
-	
-	
-	public static class FilterNoLabel implements FilterFunction<JsonNode>{
-		public boolean filter(JsonNode node){
-			if(node.get("assessed_label") != null){
-				return true;
-			}else return false;
-		}
-	}
-
-	public static class CombinedDescription implements MapFunction<JsonNode, Tuple2<String, JsonNode>>{
-		public Tuple2<String, JsonNode> map(JsonNode node) throws Exception{
-			
-			ObjectMapper jsonParser = new ObjectMapper();
-			
-			JsonNode finalNode = node;
-			
-			try{
-				String line = GlobalVar.td.getDescription(node.get("topic_id").asText());
-				JsonNode description = jsonParser.readValue(line, JsonNode.class);
-				((ObjectNode) finalNode).put("narrative", description.get("narrative").asText());
-	    		((ObjectNode) finalNode).put("description", description.get("description").asText());
-	    		((ObjectNode) finalNode).put("title", description.get("title").asText());
-	    		
-	    		return new Tuple2<String, JsonNode>(finalNode.get("topic_id").asText(), finalNode);
-			}catch(Exception e){
-				return null;
-			}
-		}
 	}
 
 	public static class PreProcessing implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
@@ -303,18 +238,6 @@ public class SumStream {
 			narrative = narrative.replaceAll("@([^\\s]+)", "");
 			description = description.replaceAll("@([^\\s]+)", "");
 			title = title.replaceAll("@([^\\s]+)", "");
-			
-//			remove character repetition
-//			tweet = tweet.replaceAll(CONSECUTIVE_CHARS, "$1");
-//			narrative = narrative.replaceAll(CONSECUTIVE_CHARS, "$1");
-//			description = description.replaceAll(CONSECUTIVE_CHARS, "$1");
-//			title = title.replaceAll(CONSECUTIVE_CHARS, "$1");
-			
-//			remove words starting with a number
-//			tweet = tweet.replaceAll(STARTS_WITH_NUMBER, "");
-//			narrative = narrative.replaceAll(STARTS_WITH_NUMBER, "");
-//			description = description.replaceAll(STARTS_WITH_NUMBER, "");
-//			title = title.replaceAll(STARTS_WITH_NUMBER, "");
 			
 //			remove everything that is not alphabet or number
 			tweet = tweet.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");

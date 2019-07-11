@@ -22,9 +22,6 @@ public class TweetParser implements MapFunction<String, JsonNode>{
 		ti = new TopicWithID(tweet2TopicFile);
 	}
 	
-	
-	
-	
 	public JsonNode map(String value) throws Exception{
 		
 		ObjectMapper jsonParser = new ObjectMapper();
