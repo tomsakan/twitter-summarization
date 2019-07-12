@@ -31,6 +31,11 @@ public class DocumentsList implements Serializable{
 		}
 	}
 	
+	public void removeTweet(String topicID, String tweetID){
+		HashMap<String, String> insideMap = (HashMap<String, String>) documents.get(topicID);
+		insideMap.remove(tweetID);
+	}
+	
 	public HashMap<String, String> getDocumentsListByTopic(String topicID){
 //		System.out.println(documents);
 		if(documents.containsKey(topicID)){

@@ -19,7 +19,11 @@ public class CosineSimilarityCalculator implements Serializable{
 	        normA += Math.pow(queryVector[i], 2);
 	        normB += Math.pow(documentVector[i], 2);
 		}
-//		System.out.println(dotProduct);
+		
+		if((Math.sqrt(normA) * Math.sqrt(normB)) == 0.0){
+			return dotProduct / 0.1;
+		}
+//		System.out.println(dotProduct + " "+ (Math.sqrt(normA) * Math.sqrt(normB)));
 		return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 	}
 }

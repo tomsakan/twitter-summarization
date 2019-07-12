@@ -19,17 +19,18 @@ public class TFIDFCalculator implements Serializable{
 				result++;
 			}
 		}
-//		if(term.equals("term") && result != 0.0) System.out.println(term +" "+result);
-		return result/doc.size();
+//		if(term.equals("panera")) System.out.println("tf "+term +" "+result);
+		return result/(double)(doc.size());
 	}
 	
 //	idf calculator
-	public double idf(Integer size, Integer termCount){
-		return Math.log(size / termCount);
+	public double idf(Integer size, Integer termCount, String term){
+//		if(term.equals("panera")) System.out.println("idf: "+(size / (double)termCount)+"\tsize: "+size +"\tcount: "+termCount);
+		return Math.log(size / (double)termCount);
 	}
 	
 	public double tfIdf(List<String> doc, Integer size, Integer termCount, String term){
-		return tf(doc, term) * idf(size, termCount);
+		return tf(doc, term) * idf(size, termCount, term);
 	}
 	
 }

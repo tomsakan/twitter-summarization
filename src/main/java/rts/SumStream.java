@@ -34,6 +34,7 @@ import rts.tasks.CombinedDescription;
 import rts.tasks.TweetParser;
 import rts.tasks.FilterNoLabels;
 import rts.tasks.PreProcessing;
+import rts.tasks.SelectSummary;
 import rts.tasks.ContainsKeyWords;
 import rts.tasks.CreateDocumentList;
 
@@ -89,7 +90,7 @@ public class SumStream {
 				.filter(new CheckLength());
 		
 //				create a map of strings which share the same topic id key	
-		DataStream<Tuple2<String, JsonNode>> output = preprocessed.keyBy(0).map(new CalculateTFIDF());
+		DataStream<Tuple2<String, JsonNode>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
 		
 //		System.out.println(GlobalVar.dict);
 //		addDictionary.writeAsText(params.get("output"));
