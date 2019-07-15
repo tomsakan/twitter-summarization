@@ -77,29 +77,41 @@ public class SumStream {
 	    env.getConfig().setGlobalJobParameters(params);
         
 //	   	get twitter data from a json file
-//		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
-		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
+		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
+//		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
 		
-//		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabels());
-		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser(params.get("inputTextID"))).filter(new FilterNoLabels());
+		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabels());
+//		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser(params.get("inputTextID"))).filter(new FilterNoLabels());
 		    
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
-//		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
-		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription(params.get("inputTopic")));
-		    
+		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
+//		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription(params.get("inputTopic")));
+		   
+//		DataStream<Tuple2<String, Integer>> test = finalData.map(new Test());
+		
 //		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
 //		the documents list which contain keys(topics) and the tweets. 
 		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"))
 				.filter(new ContainsKeyWords())
 				.filter(new CheckLength());
-		
 //				create a map of strings which share the same topic id key	
-		DataStream<Tuple2<String, JsonNode>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
+
+//		DataStream<Tuple2<String, Integer>> test = preprocessed.map(new Test());
 		
-//		System.out.println(GlobalVar.dict);
-//		addDictionary.writeAsText(params.get("output"));
+		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
+//		DataStream<Tuple2<String, Integer>> test = output.map(new Test());
+
+//		output.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
+	
+//	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, Integer>>{
+//		public Tuple2<String, Integer> map(Tuple2<String, JsonNode> node){
+////			System.out.println(node.f1);
+//			return new Tuple2<String, Integer>(node.f0, node.f1.get("actual_label").asInt());
+////			return null;
+//		}
+//	}
 }
 
 

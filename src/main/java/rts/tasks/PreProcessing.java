@@ -81,6 +81,13 @@ public  class PreProcessing implements MapFunction<Tuple2<String, JsonNode>, Tup
 		filteredWords.removeAll(stopwords);
 		title = filteredWords.stream().collect(Collectors.joining(" "));
 		
+//		Stemming
+		Stemmer stemmer = new Stemmer();
+		tweet = stemmer.stemText(tweet);
+		narrative = stemmer.stemText(narrative);
+		description = stemmer.stemText(description);
+		title = stemmer.stemText(title);
+		
 		ObjectMapper mapper = new ObjectMapper();
 		String json = "{\"id\":\""+ node.f1.get("id").asText() +"\"}";
 		

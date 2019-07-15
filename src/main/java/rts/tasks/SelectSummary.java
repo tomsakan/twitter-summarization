@@ -15,7 +15,7 @@ import org.apache.flink.util.Collector;
 
 import rts.datastructures.SummariesList;
 
-public class SelectSummary implements FlatMapFunction<Tuple2<String, JsonNode>, Tuple2<String, JsonNode>>{
+public class SelectSummary implements FlatMapFunction<Tuple2<String, JsonNode>, Tuple2<String, String>>{
 
 	/**
 	 * 
@@ -27,30 +27,26 @@ public class SelectSummary implements FlatMapFunction<Tuple2<String, JsonNode>, 
 	Integer summarySize = 5;
 
 	@Override
-	public void flatMap(Tuple2<String, JsonNode> node, Collector<Tuple2<String, JsonNode>> out) throws Exception {
-		// TODO Auto-generated method stub
-//		System.out.println(node.f0+" "+node.f1.get("id").asText()+" "+node.f1.get("cosine_score").asText());
-//		System.out.println(node.f0);
-		if(summaries.getSummary(node.f0) == null){
-			summaries.addSummary(node.f0, node.f1.get("id").asText(), node.f1);
+	public void flatMap(Tuple2<String, JsonNode> node, Collector<Tuple2<String, String>> out) throws Exception {
+		
+		if(summaries.getSummaries(node.f0) == null){
+			summaries.addCosineScore(node.f0, node.f1.get("cosine_score").asDouble());
+//			System.out.println(node.f0+"\t"+summaries.getCount(node.f0));
+			out.collect(new Tuple2<String, String>(node.f0, node.f1.get("actual_label").asText()));
 		}else{
-			if(summaries.getSummarySize(node.f0) >= summarySize){
-				boolean moreThanSum = false;
-//				HashMap<String, Double> sorted = summaries.getSummariesToSort(node.f0).entrySet().stream()
-//						.sorted(comparingByValue())
-//						.collect(toMap(HashMap.Entry::getKey, HashMap.Entry::getValue, (e1, e2) -> e2, LinkedHashMap::new));
-				
-//				for(Entry<String, JsonNode> summary : summaries.getSummary(node.f0).entrySet()){
-//					double sumCosine = summary.getValue().get("cosine_score").asDouble();
-////					String topicTemp = summary.getKey();
-//					if(node.f1.get("cosine_score").asDouble() > sumCosine){
-//						summaries.addSummary(node.f0, node.f1.get("id").asText(), node.f1);
-//						moreThanSum = true;
-//						break;
-//					}
+			if((node.f1.get("cosine_score").asDouble() >= (summaries.getAvergeScore(node.f0))) && node.f1.get("cosine_score").asDouble() != 0.0){
+//				if(node.f0.equals("RTS48")){
+//					summaries.addCosineScore(node.f0, node.f1.get("cosine_score").asDouble());
+//					System.out.println(summaries.getAvergeScore(node.f0));
 //				}
+//				System.out.println(node);
+				summaries.addCosineScore(node.f0, node.f1.get("cosine_score").asDouble());
+//				System.out.println(node.f1.get("actual_label").asText()+"\t"+node.f1.get("cosine_score").asText());
+				out.collect(new Tuple2<String, String>(node.f0, node.f1.get("actual_label").asText()));
 			}else{
-				summaries.addSummary(node.f0, node.f1.get("id").asText(), node.f1);
+				summaries.addCosineScore(node.f0, node.f1.get("cosine_score").asDouble());
+//				System.out.println(node.f1.get("actual_label").asText()+"\t"+node.f1.get("cosine_score").asText());
+//				System.out.println("Bye");
 			}
 		}
 		

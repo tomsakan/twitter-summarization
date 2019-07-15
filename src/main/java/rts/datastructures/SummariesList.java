@@ -12,44 +12,49 @@ public class SummariesList implements Serializable{
 	 */
 	private static final long serialVersionUID = -316570763694424885L;
 	
-	public HashMap<String, HashMap<String, JsonNode>> summaries = new HashMap<String, HashMap<String, JsonNode>>();
-	
-	public HashMap<String, HashMap<String, Double>> summariesToSort = new HashMap<String, HashMap<String, Double>>();
+	public HashMap<String, String> summaries = new HashMap<String, String>();
 	
 	public SummariesList() {};
 	
-	public void addSummary(String topicID, String id, JsonNode node){
-		HashMap<String, JsonNode> innerMap = (HashMap<String, JsonNode>) summaries.get(topicID);
-		HashMap<String, Double> innerMapToSort = new HashMap<String, Double>();
-		if(innerMap == null){
-			innerMap = new HashMap<String, JsonNode>();
-			innerMap.put(id, node);
-			innerMapToSort.put(id, node.get("cosine_score").asDouble());
-			summaries.put(topicID, innerMap);
-			summariesToSort.put(topicID, innerMapToSort);
-			
+	public void addCosineScore(String topicID, Double cosine_score){
+		if(summaries.get(topicID) == null){
+//			summaries = new HashMap<String, String>();
+//			System.out.println(topicID);
+			summaries.put(topicID, Double.toString(cosine_score)+","+"1");
 		}else{
-			innerMap.put(id, node);
-			innerMapToSort.put(id, node.get("cosine_score").asDouble());
-			summaries.put(topicID, innerMap);
-			summariesToSort.put(topicID, innerMapToSort);
+			String temp[] = summaries.get(topicID).split(",");
+//			System.out.println(Double.parseDouble(temp[0])*Integer.parseInt(temp[1]));
+			Double avgCosine = ((Double.parseDouble(temp[0])*Integer.parseInt(temp[1])) + cosine_score) / (Integer.parseInt(temp[1])+1);
+			summaries.put(topicID, Double.toString(avgCosine)+","+(Integer.parseInt(temp[1])+1));
 		}
 	}
 	
-	public Integer getSummarySize(String topicID){
-		return summaries.get(topicID).size();
+	public Double getAvergeScore(String topicID){
+		return Double.parseDouble(summaries.get(topicID).split(",")[0]);
 	}
 	
-	public HashMap<String, JsonNode> getSummary(String topicID){
+	public Integer getCount(String topicID){
+		return Integer.parseInt(summaries.get(topicID).split(",")[1]);
+	}
+	
+	public String getSummaries(String topicID){
 		return summaries.get(topicID);
 	}
 	
-	public HashMap<String, Double> getSummariesToSort(String topicID){
-		return summariesToSort.get(topicID);
-	}
-	
-	public void removeSummary(String topicID, String id){
-		summaries.get(topicID).remove(id);
-	}
+//	public Integer getSummarySize(String topicID){
+//		return summaries.get(topicID).size();
+//	}
+//	
+//	public HashMap<String, JsonNode> getSummary(String topicID){
+//		return summaries.get(topicID);
+//	}
+//	
+//	public HashMap<String, Double> getSummariesToSort(String topicID){
+//		return summariesToSort.get(topicID);
+//	}
+//	
+//	public void removeSummary(String topicID, String id){
+//		summaries.get(topicID).remove(id);
+//	}
 
 }
