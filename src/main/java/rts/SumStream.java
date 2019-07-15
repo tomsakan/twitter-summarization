@@ -77,15 +77,15 @@ public class SumStream {
 	    env.getConfig().setGlobalJobParameters(params);
         
 //	   	get twitter data from a json file
-		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
-//		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
+//		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
+		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
 		
-		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabels());
-//		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser(params.get("inputTextID"))).filter(new FilterNoLabels());
+//		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabels());
+		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser(params.get("inputTextID"))).filter(new FilterNoLabels());
 		    
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
-		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
-//		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription(params.get("inputTopic")));
+//		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
+		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription(params.get("inputTopic")));
 		   
 //		DataStream<Tuple2<String, Integer>> test = finalData.map(new Test());
 		
@@ -101,7 +101,7 @@ public class SumStream {
 		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
 //		DataStream<Tuple2<String, Integer>> test = output.map(new Test());
 
-//		output.writeAsText(params.get("output"));
+		output.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
 	

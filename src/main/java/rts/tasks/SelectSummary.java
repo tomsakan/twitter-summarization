@@ -34,7 +34,8 @@ public class SelectSummary implements FlatMapFunction<Tuple2<String, JsonNode>, 
 //			System.out.println(node.f0+"\t"+summaries.getCount(node.f0));
 			out.collect(new Tuple2<String, String>(node.f0, node.f1.get("actual_label").asText()));
 		}else{
-			if((node.f1.get("cosine_score").asDouble() >= (summaries.getAvergeScore(node.f0))) && node.f1.get("cosine_score").asDouble() != 0.0){
+			Double threshold = summaries.getAvergeScore(node.f0)*5.0;
+			if((node.f1.get("cosine_score").asDouble() >= threshold) && node.f1.get("cosine_score").asDouble() != 0.0){
 //				if(node.f0.equals("RTS48")){
 //					summaries.addCosineScore(node.f0, node.f1.get("cosine_score").asDouble());
 //					System.out.println(summaries.getAvergeScore(node.f0));

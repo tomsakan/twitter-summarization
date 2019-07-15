@@ -30,14 +30,13 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
 	DFCounter dfCounter = new DFCounter();
 
 	public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
-//		Stemmer stemmer = new Stemmer();
 		docsList.addItem(node.f0, node.f1.get("id").asText()+"!@"+node.f1.get("text").asText());
-//		dfCounter.addTerms(node.f0, node.f1.get("description").asText() +" "+node.f1.get("narrative").asText(), node.f1.get("text").asText());
-		dfCounter.addTerms(node.f0, node.f1.get("description").asText(), node.f1.get("text").asText());
+		dfCounter.addTerms(node.f0, node.f1.get("description").asText() +" "+node.f1.get("narrative").asText(), node.f1.get("text").asText());
+//		dfCounter.addTerms(node.f0, node.f1.get("description").asText(), node.f1.get("text").asText());
 		Collection<String> docs = docsList.getDocumentsListByTopic(node.f0).values();
 		
-//		String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");	
-		String[] description = (node.f1.get("description").asText()).split(" ");	
+		String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");	
+//		String[] description = (node.f1.get("description").asText()).split(" ");	
 		Double cosineForTweet = 0.0;
 
 		for(HashMap.Entry<String, String> entry : docsList.getDocumentsListByTopic(node.f0).entrySet()){
@@ -45,8 +44,8 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
             if(key.equals(node.f1.get("id").asText())){
             	List<String> doc = Arrays.asList(entry.getValue().split(" "));
 
-//                List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText() +" "+node.f1.get("narrative").asText())).split(" "));
-            	List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText())).split(" "));
+                List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText() +" "+node.f1.get("narrative").asText())).split(" "));
+//            	List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText())).split(" "));
                 List<String> terms = new ArrayList<String>();
             	
                 for(String term : temp){
@@ -61,19 +60,22 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
                 for(String term : terms){
                   double tfidfDoc = calculatorTFIDF.tfIdf(doc, docs.size(), dfCounter.getDF(node.f0, term), term);
                   double tfidfQuery = calculatorTFIDF.tfIdf(Arrays.asList(description), docs.size(), dfCounter.getDF(node.f0, term), term);
+//                  if(key.equals("891817763542630404")) System.out.println(term+"\tdoc: "+tfidfDoc+"\t"+"query: "+tfidfQuery);
                   docArr[i] = tfidfDoc;
                   queryArr[i] = tfidfQuery;
                   i++;
                 }
                 double cosine = CosineSimilarityCalculator.cosineSimilarity(docArr, queryArr);
                 cosineForTweet = cosine;
+//                if(key.equals("891817763542630404")) System.out.println(cosineForTweet);
             }else continue;
 		}
 		
 		JsonNode parsedJson = node.f1;
 		((ObjectNode) parsedJson).put("cosine_score", cosineForTweet);
+//		if(node.f1.get("id").asText().equals("891735060289900545")) System.out.println(cosineForTweet);
 //		if(node.f0.equals("RTS48"))System.out.println(parsedJson);
-		if(node.f0.equals("RTS47"))System.out.println(parsedJson.get("id").asText()+"\t\t"+parsedJson.get("actual_label").asText()+"\t\t"+parsedJson.get("cosine_score").asDouble());
+//		if(node.f0.equals("RTS47"))System.out.println(parsedJson.get("id").asText()+"\t\t"+parsedJson.get("actual_label").asText()+"\t\t"+parsedJson.get("cosine_score").asDouble());
 		return new Tuple2<String, JsonNode>(node.f0, parsedJson);
 	}
 }
