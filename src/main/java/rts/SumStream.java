@@ -101,7 +101,7 @@ public class SumStream {
 		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
 //		DataStream<Tuple2<String, Integer>> test = output.map(new Test());
 
-		output.writeAsText(params.get("output"));
+//		output.writeAsText(params.get("output"));
 	    env.execute("Twitter Summarization");
 	}
 	
