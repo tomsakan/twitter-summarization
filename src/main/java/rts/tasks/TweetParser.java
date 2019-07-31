@@ -28,9 +28,9 @@ public class TweetParser implements MapFunction<String, JsonNode>{
 		
 		JsonNode node = jsonParser.readValue(value, JsonNode.class);
 		
-		List<String> keepList = Lists.newArrayList("created_at", "id", "full_text");
+//		List<String> keepList = Lists.newArrayList("created_at", "id", "full_text");
 		
-		node = ((ObjectNode) node).retain(keepList);
+//		node = ((ObjectNode) node).retain(keepList);
 	   
 		JsonNode parsedJson = node;
 		

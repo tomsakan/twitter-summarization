@@ -33,6 +33,7 @@ import rts.tasks.CheckLength;
 import rts.tasks.CombinedDescription;
 import rts.tasks.TweetParser;
 import rts.tasks.FilterNoLabels;
+import rts.tasks.IsEnglish;
 import rts.tasks.PreProcessing;
 import rts.tasks.SelectSummary;
 import rts.tasks.ContainsKeyWords;
@@ -93,7 +94,8 @@ public class SumStream {
 //		the documents list which contain keys(topics) and the tweets. 
 		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"))
 				.filter(new ContainsKeyWords())
-				.filter(new CheckLength());
+				.filter(new CheckLength())
+				.filter(new IsEnglish());
 //				create a map of strings which share the same topic id key	
 
 //		DataStream<Tuple2<String, Integer>> test = preprocessed.map(new Test());

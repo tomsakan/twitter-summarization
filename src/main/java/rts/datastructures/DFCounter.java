@@ -21,9 +21,13 @@ public class DFCounter implements Serializable{
 
 		HashMap<String, Integer> innerMap = (HashMap<String, Integer>) DFTerms.get(topicID);
 		List<String> temp = new ArrayList<String>();
+//		System.out.println("Hi");
 		if(innerMap == null){
 			temp =  Arrays.asList(((sentence+" "+description).split(" ")));
-		}else temp =  Arrays.asList((sentence.split(" ")));
+		}else{
+			temp =  Arrays.asList((sentence.split(" ")));
+//			System.out.print("Hi");
+		}
 		
 		List<String> terms = new ArrayList<String>();
 		

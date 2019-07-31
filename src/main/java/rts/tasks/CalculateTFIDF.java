@@ -31,12 +31,12 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
 
 	public Tuple2<String, JsonNode> map(Tuple2<String, JsonNode> node){
 		docsList.addItem(node.f0, node.f1.get("id").asText()+"!@"+node.f1.get("text").asText());
-		dfCounter.addTerms(node.f0, node.f1.get("description").asText() +" "+node.f1.get("narrative").asText(), node.f1.get("text").asText());
-//		dfCounter.addTerms(node.f0, node.f1.get("description").asText(), node.f1.get("text").asText());
+//		dfCounter.addTerms(node.f0, node.f1.get("description").asText() +" "+node.f1.get("narrative").asText(), node.f1.get("text").asText());
+		dfCounter.addTerms(node.f0, node.f1.get("title").asText(), node.f1.get("text").asText());
 		Collection<String> docs = docsList.getDocumentsListByTopic(node.f0).values();
 		
-		String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");	
-//		String[] description = (node.f1.get("description").asText()).split(" ");	
+//		String[] description = (node.f1.get("description").asText() +" "+node.f1.get("narrative").asText()).split(" ");	
+		String[] description = (node.f1.get("title").asText()).split(" ");	
 		Double cosineForTweet = 0.0;
 
 		for(HashMap.Entry<String, String> entry : docsList.getDocumentsListByTopic(node.f0).entrySet()){
@@ -44,8 +44,8 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
             if(key.equals(node.f1.get("id").asText())){
             	List<String> doc = Arrays.asList(entry.getValue().split(" "));
 
-                List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText() +" "+node.f1.get("narrative").asText())).split(" "));
-//            	List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText())).split(" "));
+//                List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("description").asText() +" "+node.f1.get("narrative").asText())).split(" "));
+            	List<String> temp =  Arrays.asList((entry.getValue()+" "+(node.f1.get("title").asText())).split(" "));
                 List<String> terms = new ArrayList<String>();
             	
                 for(String term : temp){
@@ -63,8 +63,14 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
 //                  if(key.equals("891817763542630404")) System.out.println(term+"\tdoc: "+tfidfDoc+"\t"+"query: "+tfidfQuery);
                   docArr[i] = tfidfDoc;
                   queryArr[i] = tfidfQuery;
+//                  if(node.f0.equals("RTS47")) {
+//                	  System.out.println("term: "+term+" TFIDF score: "+tfidfDoc);
+//                	  System.out.println("term: "+term+" TFIDF score: "+tfidfQuery);
+//                  }
                   i++;
                 }
+                
+//                if(node.f0.equals("RTS47")) System.out.println("----------------");
                 double cosine = CosineSimilarityCalculator.cosineSimilarity(docArr, queryArr);
                 cosineForTweet = cosine;
 //                if(key.equals("891817763542630404")) System.out.println(cosineForTweet);

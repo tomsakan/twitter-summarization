@@ -26,7 +26,7 @@ public class TFIDFCalculator implements Serializable{
 //	idf calculator
 	public double idf(Integer size, Integer termCount, String term){
 //		System.out.println("idf: "+(size / (double)termCount)+"\tsize: "+size +"\tcount: "+termCount);
-		return Math.log(size / (double)termCount);
+		return Math.log(1+(size / (double)termCount));
 	}
 	
 	public double tfIdf(List<String> doc, Integer size, Integer termCount, String term){
