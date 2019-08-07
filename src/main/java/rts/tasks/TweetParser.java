@@ -1,10 +1,8 @@
 package rts.tasks;
 
 import java.io.IOException;
-import java.util.List;
 
 import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.calcite.shaded.com.google.common.collect.Lists;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;

@@ -1,29 +1,8 @@
 package rts;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.apache.flink.api.common.functions.FilterFunction;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.utils.ParameterTool;
-import org.apache.flink.calcite.shaded.com.google.common.collect.Lists;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -31,14 +10,13 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import rts.tasks.CalculateTFIDF;
 import rts.tasks.CheckLength;
 import rts.tasks.CombinedDescription;
-import rts.tasks.TweetParser;
+import rts.tasks.ContainsKeyWords;
 import rts.tasks.FilterNoLabels;
 import rts.tasks.IsEnglish;
 import rts.tasks.PreProcessing;
 import rts.tasks.SelectSummary;
-import rts.tasks.ContainsKeyWords;
-import rts.tasks.CreateDocumentList;
-
+import rts.tasks.TweetParser;
+import rts.tasks.Word2VecTest;
 
 
 public class SumStream {
@@ -92,7 +70,7 @@ public class SumStream {
 		
 //		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
 //		the documents list which contain keys(topics) and the tweets. 
-		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing("/Users/Tutumm/rt_sum/dataset/input/stopwords.txt"))
+		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing(params.get("stopWord")))
 				.filter(new ContainsKeyWords())
 				.filter(new CheckLength())
 				.filter(new IsEnglish());
@@ -100,7 +78,8 @@ public class SumStream {
 
 //		DataStream<Tuple2<String, Integer>> test = preprocessed.map(new Test());
 		
-		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
+//		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
+		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new Word2VecTest(params.get("stopWord")));
 //		DataStream<Tuple2<String, Integer>> test = output.map(new Test());
 
 //		output.writeAsText(params.get("output"));

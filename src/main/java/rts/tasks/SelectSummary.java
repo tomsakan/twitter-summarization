@@ -36,7 +36,8 @@ public class SelectSummary implements FlatMapFunction<Tuple2<String, JsonNode>, 
 			disSim.addSummary(node.f0, node.f1.get("text").asText());
 //			System.out.println(node.f0+"\t"+summaries.getCount(node.f0));
 			if(node.f0.equals("RTS48")){
-				System.out.println(node.f1.get("cosine_score").asDouble()+"\t"+node.f1.get("actual_label").asText()+"\t"+node.f1.get("original_text").asText());
+				System.out.println("Label: " + node.f1.get("actual_label").asText()+"\nCosine Score: "+node.f1.get("cosine_score").asDouble()+"\nTweet: "+node.f1.get("original_text").asText());
+				System.out.println("---------------------------------");
 				out.collect(new Tuple2<String, String>(node.f1.get("original_text").asText(), node.f1.get("actual_label").asText()));
 			}
 		}else{
@@ -51,7 +52,8 @@ public class SelectSummary implements FlatMapFunction<Tuple2<String, JsonNode>, 
 					if(disSim.checkDissim(node.f0, node.f1.get("text").asText())){
 						disSim.addSummary(node.f0, node.f1.get("text").asText());
 						out.collect(new Tuple2<String, String>(node.f1.get("original_text").asText(), node.f1.get("actual_label").asText()));
-						System.out.println(node.f1.get("cosine_score").asDouble()+"\t"+node.f1.get("actual_label").asText()+"\t"+node.f1.get("original_text").asText());
+						System.out.println("Label: " + node.f1.get("actual_label").asText()+"\nCosine Score: "+node.f1.get("cosine_score").asDouble()+"\nTweet: "+node.f1.get("original_text").asText());
+						System.out.println("---------------------------------");
 					}
 				}
 			}else{

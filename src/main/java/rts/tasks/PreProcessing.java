@@ -97,6 +97,9 @@ public  class PreProcessing implements MapFunction<Tuple2<String, JsonNode>, Tup
 		((ObjectNode) preprocessedJson).put("narrative",narrative);
 		((ObjectNode) preprocessedJson).put("description",description);
 		((ObjectNode) preprocessedJson).put("title",title);
+		((ObjectNode) preprocessedJson).put("original_narrative",node.f1.get("narrative").asText());
+		((ObjectNode) preprocessedJson).put("original_description",node.f1.get("description").asText());
+		((ObjectNode) preprocessedJson).put("original_title",node.f1.get("title").asText());
 		((ObjectNode) preprocessedJson).put("original_text",node.f1.get("full_text").asText());
 		((ObjectNode) preprocessedJson).put("actual_label", node.f1.get("assessed_label").asText());
 		((ObjectNode) preprocessedJson).put("lang", node.f1.get("lang").asText());
