@@ -44,58 +44,66 @@ public class Word2VecTest implements FlatMapFunction<Tuple2<String, JsonNode>, T
 	public Word2VecTest(String path) throws IOException{
 		stopwords = Files.readAllLines(Paths.get(path));
 	}
+	
+	public double[][] getSimilarityMatrix( String[] words1, String[] words2, RelatednessCalculator rc )
+	{
+	    double[][] result = new double[words1.length][words2.length];
+	    for ( int i=0; i<words1.length; i++ ){
+	        for ( int j=0; j<words2.length; j++ ) {
+	            double score = rc.calcRelatednessOfWords(words1[i], words2[j]);
+	            result[i][j] = score;
+	          }
+	        }
+	    return result;
+	  }
 
-	private static double compute(String word1, String word2) {
-		WS4JConfiguration.getInstance().setMFS(true);
-		double s = new WuPalmer(db).calcRelatednessOfWords(word1, word2);
-		return s;
-	}
+	private void compute (String[] tweet, String[] description)
+	{
+//		System.out.println("WuPalmer");
+	    RelatednessCalculator rc1 = new WuPalmer(db);
+	    double[][] s1 = getSimilarityMatrix(tweet, description,rc1);
+	    for(int i=0; i<tweet.length; i++){
+	    	for(int j=0; j< description.length; j++){
+	    		System.out.println(tweet[i] + " - " + description[j] + " " +s1[i][j]);
+	    	} 
+//	    	System.out.println();
+	    }
+	  }
 	
 	@Override
 	public void flatMap(Tuple2<String, JsonNode> node, Collector<Tuple2<String, String>> out) throws Exception {
 		if(node.f0.equals("RTS48")){
 			
-			String text = node.f1.get("original_text").asText() + " " + node.f1.get("original_description").asText();
+			String tweet = node.f1.get("original_text").asText();
+			String description = node.f1.get("original_description").asText();
 			
-			text = text.replaceAll(URL_REGEX, "");
-			text = text.replaceAll("@([^\\s]+)", "");
-			text = text.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			text = text.replaceAll("#[A-Za-z]+","");
-			text = text.replaceAll("\n", "");
-			text = text.replaceAll("RT", "");
+			tweet = tweet.replaceAll(URL_REGEX, "");
+			tweet = tweet.replaceAll("@([^\\s]+)", "");
+			tweet = tweet.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
+			tweet = tweet.replaceAll("#[A-Za-z]+","");
+			tweet = tweet.replaceAll("\n", "");
+			tweet = tweet.replaceAll("RT", "");
+			description = description.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
+			description = description.replaceAll("#[A-Za-z]+","");
 			
-			ArrayList<String> filteredWords = (ArrayList) Stream.of(text.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+			ArrayList<String> filteredWords = (ArrayList) Stream.of(tweet.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
 			filteredWords.removeAll(stopwords);
-			text = filteredWords.stream().collect(Collectors.joining(" "));
+			tweet = filteredWords.stream().collect(Collectors.joining(" "));
 			
-			List<String> temp = new ArrayList<>(Arrays.asList(text.split(" ")));
-			List<String> terms = new ArrayList<String>();
+			filteredWords = (ArrayList) Stream.of(description.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+			filteredWords.removeAll(stopwords);
+			description = filteredWords.stream().collect(Collectors.joining(" "));
 			
-			for(String term : temp){
-				if(!(terms.contains(term) || term.equals(" ") || term.equals(""))){
-					terms.add(term);
-				}
-			}
+			compute(tweet.split(" "), description.split(" "));
+			System.out.println("---------------------------------------------");
+//			int count = 0;
+//			double score = 0.0;
+//			double max = 0.0;
+//			
+//			
+//			double sim = score/count;
+//			System.out.println("Label: " + node.f1.get("actual_label").asText() + "\nSimilarity Score: " + sim + "\nTweet: " + node.f1.get("original_text").asText());
 			
-			String[] words = new String[terms.size()];
-			words = terms.toArray(words);
-			
-			int count = 0;
-			double score = 0.0;
-			double max = 0.0;
-			for(int i=0; i<words.length-1; i++){
-				for(int j=i+1; j<words.length; j++){
-					double distance = compute(words[i], words[j]);
-					if(distance > max) max = distance;
-					System.out.println(words[i] +" -  " +  words[j] + " = " + distance);
-				}
-				count++;
-				score = score + max;
-			}
-			
-			double sim = score/count;
-			System.out.println("Label: " + node.f1.get("actual_label").asText() + "\nSimilarity Score: " + sim + "\nTweet: " + node.f1.get("original_text").asText());
-			System.out.println("---------------------------------");
 //        out.collect(new Tuple2<String, String>(node.f1.get("original_text").asText(), node.f1.get("actual_label").asText()));
 		}
 	}
