@@ -20,32 +20,6 @@ import rts.tasks.Word2VecTest;
 
 
 public class SumStream {
-	
-//	static class CosineSimilarityList{
-//		public HashMap<String, HashMap<String, Double>> cosineList = new HashMap<String, HashMap<String, Double>>();
-//		
-//		
-//		public void addItem(String topicID, String id, Double cosineSim){
-//
-//			HashMap<String, Double> insideMap = (HashMap<String, Double>) cosineList.get(topicID);
-//			
-////			if key is null, create a new map
-//			if(insideMap == null){
-//				insideMap = new HashMap<String, Double>();
-//				insideMap.put(id, cosineSim);
-//				cosineList.put(topicID, insideMap);
-//			}else{
-//				insideMap.put(id, cosineSim);
-//				cosineList.put(topicID, insideMap);
-//			}
-//		}
-//		
-//		public HashMap<String, Double> getCosineSim(String topicID){
-//			if(cosineList.containsKey(topicID)){
-//				return cosineList.get(topicID);
-//			}else return null;
-//		}
-//	}
 
 	public static void main(String[] args) throws Exception
 	{
@@ -56,17 +30,12 @@ public class SumStream {
 	    env.getConfig().setGlobalJobParameters(params);
         
 //	   	get twitter data from a json file
-//		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputTest3"));
 		DataStreamSource<String> twitterData = env.readTextFile(params.get("inputJson"));
 		
-//		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser("/Users/Tutumm/rt_sum/dataset/input/test1.txt")).filter(new FilterNoLabels());
 		DataStream<JsonNode> parsedDataWithTopicID = twitterData.map(new TweetParser(params.get("inputTextID"))).filter(new FilterNoLabels());
 		    
 //		combine the final tweet which contains most improtant features for summarization. e.g. topic id, description, title and assessed label.
-//		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription("/Users/Tutumm/rt_sum/dataset/input/test2.json"));
 		DataStream<Tuple2<String, JsonNode>> finalData =  parsedDataWithTopicID.map(new CombinedDescription(params.get("inputTopic")));
-		   
-//		DataStream<Tuple2<String, Integer>> test = finalData.map(new Test());
 		
 //		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
 //		the documents list which contain keys(topics) and the tweets. 
@@ -75,24 +44,13 @@ public class SumStream {
 				.filter(new CheckLength())
 				.filter(new IsEnglish());
 //				create a map of strings which share the same topic id key	
-
-//		DataStream<Tuple2<String, Integer>> test = preprocessed.map(new Test());
 		
 //		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
-		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new Word2VecTest(params.get("stopWord")));
-//		DataStream<Tuple2<String, Integer>> test = output.map(new Test());
+		DataStream<String> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new Word2VecTest(params.get("stopWord")));
 
-//		output.writeAsText(params.get("output"));
+		output.writeAsText(params.get("output")).setParallelism(1);
 	    env.execute("Twitter Summarization");
 	}
-	
-//	public static class Test implements MapFunction<Tuple2<String, JsonNode>, Tuple2<String, Integer>>{
-//		public Tuple2<String, Integer> map(Tuple2<String, JsonNode> node){
-////			System.out.println(node.f1);
-//			return new Tuple2<String, Integer>(node.f0, node.f1.get("actual_label").asInt());
-////			return null;
-//		}
-//	}
 }
 
 

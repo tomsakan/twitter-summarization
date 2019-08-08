@@ -29,7 +29,7 @@ import edu.cmu.lti.ws4j.impl.Resnik;
 import edu.cmu.lti.ws4j.impl.WuPalmer;
 import edu.cmu.lti.ws4j.util.WS4JConfiguration;
 
-public class Word2VecTest implements FlatMapFunction<Tuple2<String, JsonNode>, Tuple2<String, String>>{
+public class Word2VecTest implements FlatMapFunction<Tuple2<String, JsonNode>, String>{
 
 	/**
 	 * 
@@ -45,57 +45,87 @@ public class Word2VecTest implements FlatMapFunction<Tuple2<String, JsonNode>, T
 		stopwords = Files.readAllLines(Paths.get(path));
 	}
 	
-	public double[][] getSimilarityMatrix( String[] words1, String[] words2, RelatednessCalculator rc )
+	public double[][] getSimilarityMatrix( String[] tweet, String[] description, RelatednessCalculator rc )
 	{
-	    double[][] result = new double[words1.length][words2.length];
-	    for ( int i=0; i<words1.length; i++ ){
-	        for ( int j=0; j<words2.length; j++ ) {
-	            double score = rc.calcRelatednessOfWords(words1[i], words2[j]);
-	            result[i][j] = score;
+	    double[][] result = new double[tweet.length][description.length];
+	    for ( int i=0; i<tweet.length; i++ ){
+	        for ( int j=0; j<description.length; j++ ) {
+	        	if(!tweet[i].equals(description[j])){
+	        		double score = rc.calcRelatednessOfWords(tweet[i], description[j]);
+		            result[i][j] = score;
+	        	}
 	          }
 	        }
 	    return result;
 	  }
 
-	private void compute (String[] tweet, String[] description)
+	private double compute (String[] tweet, String[] description)
 	{
-//		System.out.println("WuPalmer");
-	    RelatednessCalculator rc1 = new WuPalmer(db);
-	    double[][] s1 = getSimilarityMatrix(tweet, description,rc1);
+		int count = 0;
+		double score = 0.0;
+		double max = 0.0;
+	    
+		RelatednessCalculator rc1 = new WuPalmer(db);
+	    double[][] distance = getSimilarityMatrix(tweet, description,rc1);
 	    for(int i=0; i<tweet.length; i++){
 	    	for(int j=0; j< description.length; j++){
-	    		System.out.println(tweet[i] + " - " + description[j] + " " +s1[i][j]);
-	    	} 
-//	    	System.out.println();
+	    		if(!tweet[i].equals(description[j])){
+	    			if(distance[i][j]>max) max = distance[i][j];
+	    			System.out.println(tweet[i] + " - " + description[j] + " " +distance[i][j]);
+	    		}
+	    	}
+	    	count++;
+			score = score + max;
 	    }
+//	    System.out.println("Score: "+ score + " Count " + count);
+	    return score/count;
 	  }
 	
+	private String regEx(String str){
+		
+		str = str.replaceAll(URL_REGEX, "");
+		str = str.replaceAll("@([^\\s]+)", "");
+		str = str.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
+		str = str.replaceAll("#[A-Za-z]+","");
+		str = str.replaceAll("\n", "");
+		str = str.replaceAll("RT", "");
+		
+		ArrayList<String> filteredWords = (ArrayList) Stream.of(str.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
+		filteredWords.removeAll(stopwords);
+		str = filteredWords.stream().collect(Collectors.joining(" "));
+		
+		return str;
+		
+	}
+	
+	private String[] cleanText(String str){
+		
+		List<String> temp = new ArrayList<>(Arrays.asList(str.split(" ")));
+		List<String> terms = new ArrayList<String>();
+		
+		for(String term : temp){
+			if(!(terms.contains(term) || term.equals(" ") || term.equals(""))){
+				terms.add(term);
+			}
+		}
+		
+		String[] words = new String[terms.size()];
+		words = terms.toArray(words);
+		
+		return words;
+		
+	}
+	
 	@Override
-	public void flatMap(Tuple2<String, JsonNode> node, Collector<Tuple2<String, String>> out) throws Exception {
+	public void flatMap(Tuple2<String, JsonNode> node, Collector<String> out) throws Exception {
 		if(node.f0.equals("RTS48")){
 			
-			String tweet = node.f1.get("original_text").asText();
-			String description = node.f1.get("original_description").asText();
+			String tweet = regEx(node.f1.get("original_text").asText());
+			String description = regEx(node.f1.get("original_description").asText());
 			
-			tweet = tweet.replaceAll(URL_REGEX, "");
-			tweet = tweet.replaceAll("@([^\\s]+)", "");
-			tweet = tweet.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			tweet = tweet.replaceAll("#[A-Za-z]+","");
-			tweet = tweet.replaceAll("\n", "");
-			tweet = tweet.replaceAll("RT", "");
-			description = description.replaceAll("[^\\p{IsDigit}\\p{IsAlphabetic}]", " ");
-			description = description.replaceAll("#[A-Za-z]+","");
-			
-			ArrayList<String> filteredWords = (ArrayList) Stream.of(tweet.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.removeAll(stopwords);
-			tweet = filteredWords.stream().collect(Collectors.joining(" "));
-			
-			filteredWords = (ArrayList) Stream.of(description.toLowerCase().split(" ")).collect(Collectors.toCollection(ArrayList<String>::new));
-			filteredWords.removeAll(stopwords);
-			description = filteredWords.stream().collect(Collectors.joining(" "));
-			
-			compute(tweet.split(" "), description.split(" "));
-			System.out.println("---------------------------------------------");
+//			System.out.println("Label: " + node.f1.get("actual_label").asText() + "\nW2V Score: " + compute(cleanText(tweet), cleanText(description)) + "\nTF-IDF Score: " + node.f1.get("cosine_score").asDouble() + "\nTweet: " + node.f1.get("original_text").asText());
+//			compute(cleanText(tweet), cleanText(description));
+//			System.out.println("---------------------------------------------");
 //			int count = 0;
 //			double score = 0.0;
 //			double max = 0.0;
@@ -104,7 +134,7 @@ public class Word2VecTest implements FlatMapFunction<Tuple2<String, JsonNode>, T
 //			double sim = score/count;
 //			System.out.println("Label: " + node.f1.get("actual_label").asText() + "\nSimilarity Score: " + sim + "\nTweet: " + node.f1.get("original_text").asText());
 			
-//        out.collect(new Tuple2<String, String>(node.f1.get("original_text").asText(), node.f1.get("actual_label").asText()));
+        out.collect(node.f1.get("original_text").asText());
 		}
 	}
 
