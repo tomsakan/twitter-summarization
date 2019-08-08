@@ -7,6 +7,8 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
+import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
+import org.apache.flink.streaming.api.windowing.time.Time;
 
 import rts.tasks.CalculateTFIDF;
 import rts.tasks.CheckLength;
@@ -42,10 +44,10 @@ public class SumStream {
 		
 //		preprocess the tweets which remove urls, @, hashtags, character repetition, words starting with a number etc. Additionally, create
 //		the documents list which contain keys(topics) and the tweets. 
-//		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing(params.get("stopWord")))
-//				.filter(new ContainsKeyWords())
-//				.filter(new CheckLength())
-//				.filter(new IsEnglish());
+		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData.map(new PreProcessing(params.get("stopWord")))
+				.filter(new ContainsKeyWords())
+				.filter(new CheckLength())
+				.filter(new IsEnglish());
 ////				create a map of strings which share the same topic id key	
 //		
 ////		DataStream<Tuple2<String, String>> output = preprocessed.keyBy(0).map(new CalculateTFIDF()).flatMap(new SelectSummary());
@@ -53,9 +55,11 @@ public class SumStream {
 
 //		output.writeAsText(params.get("output")).setParallelism(1);
 		
-		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData
-				.assignTimestampsAndWatermarks(new ExtractTimeStamp());
-		
+//		DataStream<Tuple2<String, JsonNode>> preprocessed = finalData
+//				.map(new PreProcessing(params.get("stopWord")))
+//				.assignTimestampsAndWatermarks(new ExtractTimeStamp())
+//				.keyBy(0);
+////				.window(TumblingEventTimeWindows.of(Time.days(1)));
 	    env.execute("Twitter Summarization");
 	}
 }

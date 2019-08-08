@@ -13,6 +13,10 @@ import org.apache.flink.streaming.api.watermark.Watermark;
 
 public class ExtractTimeStamp implements AssignerWithPeriodicWatermarks<Tuple2<String, JsonNode>>{
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 584824334019790704L;
 	private long currentMaxTimestamp=0;
 	
 	@Override
@@ -24,6 +28,8 @@ public class ExtractTimeStamp implements AssignerWithPeriodicWatermarks<Tuple2<S
 		Date date;
 		try {
 			date = sdf.parse(dateInString);
+			long timestamp = date.getTime();
+			currentMaxTimestamp = Math.max(timestamp, currentMaxTimestamp);
 			return date.getTime();
 		} catch (ParseException e) {
 			// TODO Auto-generated catch block
