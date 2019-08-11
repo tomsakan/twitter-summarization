@@ -87,43 +87,22 @@ public class SumStream {
 //				.map(new ExtractData())
 				.assignTimestampsAndWatermarks(new ExtractTimeStamp());
 		
-		DataStream<String> out = windowedData.map(new Test1())
-				.keyBy(new KeySelector<Tuple3<String, JsonNode, Integer>, String>(){
+		DataStream<String> out = windowedData
+				.keyBy(new KeySelector<Tuple2<String, JsonNode>, String>(){
 					/**
 					 * 
 					 */
 					private static final long serialVersionUID = -7344657668381199842L;
 
-					public String getKey(Tuple3<String, JsonNode, Integer> value)
+					public String getKey(Tuple2<String, JsonNode> value)
 					{	
-//						System.out.println(value.f0);
 						return value.f0;
 					}
 				})
 				.window(TumblingEventTimeWindows.of(Time.days(1)))
-//				.reduce(new Test());
 				.process(new TrackSummaries());
 		
-//		DataStream<Tuple2<String, JsonNode>> out = finalData
-//				.map(new PreProcessing(params.get("stopWord")))
-////				.assignTimestampsAndWatermarks(new ExtractTimeStamp())
-//				.keyBy(new KeySelector<Tuple2<String, JsonNode>, String>(){
-//					/**
-//					 * 
-//					 */
-//					private static final long serialVersionUID = -7344657668381199842L;
-//
-//					public String getKey(Tuple2<String, JsonNode> value)
-//					{	
-////						System.out.println(value.f0);
-//						return value.f0;
-//					}
-//				})
-//				.window(TumblingEventTimeWindows.of(Time.days(1)))
-//				.process(new TrackSummaries());
-//				.reduce(new Test());
-		
-		out.writeAsText(params.get("output")).setParallelism(1);
+//		out.writeAsText(params.get("output")).setParallelism(1);
 	    env.execute("Twitter Summarization");
 	}
 }
