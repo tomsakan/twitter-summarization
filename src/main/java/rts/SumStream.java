@@ -79,11 +79,12 @@ public class SumStream {
 //		output.writeAsText(params.get("output")).setParallelism(1);
 		
 		DataStream<Tuple2<String, JsonNode>> windowedData = finalData
-//				.map(new PreProcessing(params.get("stopWord")))
-//				.filter(new ContainsKeyWords())
+				.map(new PreProcessing(params.get("stopWord")))
+				.filter(new ContainsKeyWords())
 //				.filter(new CheckLength())
 //				.filter(new IsEnglish())
-//				.map(new CalculateTFIDF())
+				.map(new CalculateTFIDF())
+//				.flatMap(new SelectSummary())
 //				.map(new ExtractData())
 				.assignTimestampsAndWatermarks(new ExtractTimeStamp());
 		
@@ -102,7 +103,7 @@ public class SumStream {
 				.window(TumblingEventTimeWindows.of(Time.days(1)))
 				.process(new TrackSummaries());
 		
-//		out.writeAsText(params.get("output")).setParallelism(1);
+		out.writeAsText(params.get("output")).setParallelism(1);
 	    env.execute("Twitter Summarization");
 	}
 }
