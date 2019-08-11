@@ -31,6 +31,7 @@ public class CombinedDescription implements MapFunction<JsonNode, Tuple2<String,
 			((ObjectNode) finalNode).put("narrative", description.get("narrative").asText());
     		((ObjectNode) finalNode).put("description", description.get("description").asText());
     		((ObjectNode) finalNode).put("title", description.get("title").asText());
+    		((ObjectNode) finalNode).put("count", 1);
     		
     		return new Tuple2<String, JsonNode>(finalNode.get("topic_id").asText(), finalNode);
 		}catch(Exception e){
