@@ -2,24 +2,30 @@ package rts.tasks;
 
 
 import java.sql.Timestamp;
+
+import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
+import org.apache.flink.streaming.api.watermark.Watermark;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 
 import org.apache.flink.api.java.tuple.Tuple2;
-import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.databind.JsonNode;
 
-public class ExtractTimeStamp extends AscendingTimestampExtractor<Tuple2<String, JsonNode>>{
+public class ExtractTimeStamp implements AssignerWithPeriodicWatermarks<Tuple2<String, JsonNode>>{
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -4945470768641723602L;
 	private final SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
-	public long extractAscendingTimestamp(Tuple2<String, JsonNode> element)
-    {
-    	String[] time = element.f1.get("created_at").asText().split(" ");
+	private final long allowedlatetime = 3500;
+	private long currentMaxTimestamp = 0;
+
+	@Override
+	public long extractTimestamp(Tuple2<String, JsonNode> element, long previousElementTimestamp) {
+		String[] time = element.f1.get("created_at").asText().split(" ");
 		String month = "";
 		if(time[1].equals("Jan")) month = "01";
 		else if(time[1].equals("Feb")) month = "02";
@@ -37,10 +43,17 @@ public class ExtractTimeStamp extends AscendingTimestampExtractor<Tuple2<String,
 		try {
 			
 			Timestamp ts = new Timestamp(sdf.parse(dateInString).getTime());
+			currentMaxTimestamp = Math.max(ts.getTime(), currentMaxTimestamp);
 //			System.out.println(ts.getTime());
 			return ts.getTime();
 		} catch (ParseException e) {
 			throw new java.lang.RuntimeException("Parsing Error");
 		}
+	}
+
+	@Override
+	public Watermark getCurrentWatermark() {
+
+		return new Watermark(currentMaxTimestamp-allowedlatetime);
 	}
 }
