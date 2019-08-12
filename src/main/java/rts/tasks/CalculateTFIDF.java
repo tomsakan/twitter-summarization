@@ -80,7 +80,7 @@ public class CalculateTFIDF implements MapFunction<Tuple2<String, JsonNode>, Tup
 		JsonNode parsedJson = node.f1;
 		((ObjectNode) parsedJson).put("cosine_score", cosineForTweet);
 //		if(node.f1.get("id").asText().equals("891735060289900545")) System.out.println(cosineForTweet);
-//		if(node.f0.equals("RTS48"))System.out.println(parsedJson);
+//		if(node.f0.equals("RTS50"))System.out.println(parsedJson);
 //		if(node.f0.equals("RTS47"))System.out.println(parsedJson.get("id").asText()+"\t\t"+parsedJson.get("actual_label").asText()+"\t\t"+parsedJson.get("cosine_score").asDouble());
 		return new Tuple2<String, JsonNode>(node.f0, parsedJson);
 	}

@@ -30,20 +30,22 @@ public class TrackSummaries extends ProcessWindowFunction<Tuple2<String, JsonNod
 	    	if(summaries.getSummaries(in.f0) == null){
 				summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
 				disSim.addSummary(in.f0, in.f1.get("text").asText());
-//				if(in.f0.equals("RTS48")){
+				if(in.f0.equals("RTS50")){
 					strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
-//				}
+					System.out.println(strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0));
+				}
 			}else{
 				Double threshold = summaries.getAvergeScore(in.f0);
 				if((in.f1.get("cosine_score").asDouble() >= threshold) && in.f1.get("cosine_score").asDouble() != 0.0){
 					summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
 
-//					if(in.f0.equals("RTS48")){
+					if(in.f0.equals("RTS50")){
 						if(disSim.checkDissim(in.f0, in.f1.get("text").asText())){
 							disSim.addSummary(in.f0, in.f1.get("text").asText());
                             strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
+                            System.out.println(strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0));
 						}
-//					}
+					}
 				}else{
 					summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
 				}
@@ -85,6 +87,6 @@ public class TrackSummaries extends ProcessWindowFunction<Tuple2<String, JsonNod
 		
 		date = time[5]+month+time[2];
 		
-		return date + " " + topic_id + " " + format + " " + tweet_id + " " + rank + " " + score + " " + runtag ;
+		return date + " " + topic_id + " " + format + " " + tweet_id + " " + rank + " " + score + " " + runtag;
 	}
 }

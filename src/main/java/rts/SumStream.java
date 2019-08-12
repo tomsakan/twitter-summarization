@@ -103,7 +103,7 @@ public class SumStream {
 				.window(TumblingEventTimeWindows.of(Time.days(1)))
 				.process(new TrackSummaries());
 		
-		out.writeAsText(params.get("output")).setParallelism(1);
+//		out.writeAsText(params.get("output")).setParallelism(1);
 	    env.execute("Twitter Summarization");
 	}
 }
