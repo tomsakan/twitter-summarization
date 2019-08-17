@@ -15,6 +15,8 @@ import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindo
 
 
 import rts.tasks.CalculateTFIDF;
+import rts.tasks.CalculateWord2Vec;
+import rts.tasks.CheckFollowers;
 import rts.tasks.CheckLength;
 import rts.tasks.CombinedDescription;
 import rts.tasks.ContainsKeyWords;
@@ -22,6 +24,7 @@ import rts.tasks.ExtractData;
 import rts.tasks.ExtractTimeStamp;
 import rts.tasks.FilterNoLabels;
 import rts.tasks.IsEnglish;
+import rts.tasks.IsVerified;
 import rts.tasks.PreProcessing;
 import rts.tasks.SelectSummary;
 import rts.tasks.Test;
@@ -67,9 +70,12 @@ public class SumStream {
 		DataStream<Tuple2<String, JsonNode>> windowedData = finalData
 				.map(new PreProcessing(params.get("stopWord")))
 				.filter(new ContainsKeyWords())
-//				.filter(new CheckLength())
-//				.filter(new IsEnglish())
+				.filter(new CheckLength())
+				.filter(new IsEnglish())
+//				.filter(new IsVerified())
+//				.filter(new CheckFollowers())
 				.map(new CalculateTFIDF())
+//				.map(new CalculateWord2Vec(params.get("stopWord")))
 //				.flatMap(new SelectSummary())
 //				.map(new ExtractData())
 				.assignTimestampsAndWatermarks(new ExtractTimeStamp());
@@ -87,7 +93,7 @@ public class SumStream {
 					}
 				})
 				.window(TumblingEventTimeWindows.of(Time.days(1)))
-				.process(new TrackSummaries());
+				.process(new TrackSummaries(params.get("stopWord")));
 		
 		out.writeAsText(params.get("output")).setParallelism(1);
 	    env.execute("Twitter Summarization");

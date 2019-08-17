@@ -53,7 +53,7 @@ public class DissimilarityCheck implements Serializable{
             }
             
             double cosine = CosineSimilarityCalculator.cosineSimilarity(sumArr, tweetArr);
-            if(cosine >= 0.8) {
+            if(cosine >= 0.5) {
 //            	System.out.println(summary + "\n" + tweet + "\n" + cosine +"\n-----------");
             	return false;
             }
