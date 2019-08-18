@@ -10,6 +10,7 @@ import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 
+import rts.datastructures.DissimCheckW2V;
 import rts.datastructures.DissimilarityCheck;
 import rts.datastructures.SummariesList;
 
@@ -133,6 +134,7 @@ private String[] cleanText(String str){
 		
 		SummariesList summaries = new SummariesList();
 		DissimilarityCheck disSim = new DissimilarityCheck();
+		DissimCheckW2V disSimW2V = new DissimCheckW2V();
 		ArrayList<String> strings = new ArrayList<String>();
 		String topic = "";
 		
@@ -141,21 +143,24 @@ private String[] cleanText(String str){
 	    		topic = in.f0;
 		    	if(summaries.getSummaries(in.f0) == null){
 					summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
-					disSim.addSummary(in.f0, in.f1.get("text").asText());
+//					disSim.addSummary(in.f0, in.f1.get("text").asText());
+					disSimW2V.addSummary(in.f0, in.f1.get("original_text").asText());
 						strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
 				}else{
 					Double threshold = summaries.getAvergeScore(in.f0);
 //					Double threshold = 0.3;
 					if((in.f1.get("cosine_score").asDouble() >= threshold) && in.f1.get("cosine_score").asDouble() != 0.0){
 						summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
-						if(disSim.checkDissim(in.f0, in.f1.get("text").asText())){
-							disSim.addSummary(in.f0, in.f1.get("text").asText());
+//						if(disSim.checkDissim(in.f0, in.f1.get("text").asText())){
+						if(disSimW2V.checkDissim(in.f0, in.f1.get("original_text").asText())){
+//							disSim.addSummary(in.f0, in.f1.get("text").asText());
+							disSimW2V.addSummary(in.f0, in.f1.get("original_text").asText());
 //							String tweet = regEx(in.f1.get("original_text").asText());
 //							String description = regEx(in.f1.get("original_description").asText());
 //							Double w2vScore = compute(cleanText(tweet), cleanText(description));
 //							if(w2vScore > 0.8)
-							Double w2vScore = 0.0;
-								strings.add((in.f1.get("cosine_score").asDouble() + w2vScore)/2 + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
+//								strings.add((in.f1.get("cosine_score").asDouble() + w2vScore)/2 + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
+								strings.add(in.f1.get("cosine_score").asDouble() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
 						}	
 					}else{
 						summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
@@ -165,7 +170,6 @@ private String[] cleanText(String str){
 	    
 	    }
 	    
-//	    System.out.println(topic);
 	    Integer rank = 0;
 	    Collections.sort(strings, Collections.reverseOrder());   
 	    for(String summary : strings){
@@ -175,7 +179,6 @@ private String[] cleanText(String str){
 	}
 	
 	public String SummaryParser(String tweet, Integer rank){
-//		System.out.println(tweet);
 		String[] string = tweet.split("!@");
 		String date = "";
 		String format = "Q0";
