@@ -139,13 +139,13 @@ private String[] cleanText(String str){
 		String topic = "";
 		
 	    for (Tuple2<String, JsonNode> in: input) {
-//	    	if(in.f0.equals("RTS47") || in.f0.equals("RTS48") || in.f0.equals("RTS49")){
+	    	if(in.f0.equals("RTS48")){
 	    		topic = in.f0;
 		    	if(summaries.getSummaries(in.f0) == null){
 					summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
 //					disSim.addSummary(in.f0, in.f1.get("text").asText());
 					disSimW2V.addSummary(in.f0, in.f1.get("original_text").asText());
-						strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
+						strings.add(in.f1.get("cosine_score").asText() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0 + "!@" +in.f1.get("original_text").asText()+"!@"+in.f1.get("actual_label").asInt());
 				}else{
 					Double threshold = summaries.getAvergeScore(in.f0);
 //					Double threshold = 0.3;
@@ -155,18 +155,18 @@ private String[] cleanText(String str){
 						if(disSimW2V.checkDissim(in.f0, in.f1.get("original_text").asText())){
 //							disSim.addSummary(in.f0, in.f1.get("text").asText());
 							disSimW2V.addSummary(in.f0, in.f1.get("original_text").asText());
-//							String tweet = regEx(in.f1.get("original_text").asText());
-//							String description = regEx(in.f1.get("original_description").asText());
-//							Double w2vScore = compute(cleanText(tweet), cleanText(description));
-//							if(w2vScore > 0.8)
+							String tweet = regEx(in.f1.get("original_text").asText());
+							String description = regEx(in.f1.get("original_description").asText());
+							Double w2vScore = compute(cleanText(tweet), cleanText(description));
+							if(w2vScore > 0.5)
 //								strings.add((in.f1.get("cosine_score").asDouble() + w2vScore)/2 + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
-								strings.add(in.f1.get("cosine_score").asDouble() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0);
+								strings.add(in.f1.get("cosine_score").asDouble() + "!@" + in.f1.get("created_at").asText() + "!@" + in.f1.get("id").asText() + "!@" + in.f0 + "!@" +in.f1.get("original_text").asText()+"!@"+in.f1.get("actual_label").asInt());
 						}	
 					}else{
 						summaries.addCosineScore(in.f0, in.f1.get("cosine_score").asDouble());
 					}
 				}
-//	    	}
+	    	}
 	    
 	    }
 	    
@@ -188,6 +188,8 @@ private String[] cleanText(String str){
 		String[] time = string[1].split(" "); 
 		String month = "";
 		String topic_id = string[3];
+		String text = string[4];
+		String label = string[5];
 		
 		if(time[1].equals("Jan")) month = "01";
 		else if(time[1].equals("Feb")) month = "02";
@@ -203,7 +205,7 @@ private String[] cleanText(String str){
 		else if(time[1].equals("Dec")) month = "12";
 		
 		date = time[5]+month+time[2];
-		
+		System.out.println(date +" "+text+" "+label);
 		return date + " " + topic_id + " " + format + " " + tweet_id + " " + rank + " " + score + " " + runtag;
 	}
 }

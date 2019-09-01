@@ -70,8 +70,8 @@ public class SumStream {
 		DataStream<Tuple2<String, JsonNode>> windowedData = finalData
 				.map(new PreProcessing(params.get("stopWord")))
 				.filter(new ContainsKeyWords())
-				.filter(new CheckLength())
-				.filter(new IsEnglish())
+//				.filter(new CheckLength())
+//				.filter(new IsEnglish())
 //				.filter(new IsVerified())
 //				.filter(new CheckFollowers())
 				.map(new CalculateTFIDF())
@@ -95,7 +95,7 @@ public class SumStream {
 				.window(TumblingEventTimeWindows.of(Time.days(1)))
 				.process(new TrackSummaries(params.get("stopWord")));
 		
-		out.writeAsText(params.get("output")).setParallelism(1);
+//		out.writeAsText(params.get("output")).setParallelism(1);
 	    env.execute("Twitter Summarization");
 	}
 }
